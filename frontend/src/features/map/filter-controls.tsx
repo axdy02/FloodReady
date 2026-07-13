@@ -1,0 +1,4 @@
+"use client";
+
+export type MapFilters = { category: string; severity: string; status: string };
+export function FilterControls({ value, onChange }: { value: MapFilters; onChange: (value: MapFilters) => void }) { return <fieldset><legend>Map filters</legend><label>Category<select value={value.category} onChange={(event) => onChange({ ...value, category: event.target.value })}><option value="">All categories</option><option value="FLOODED_ROAD">Flooded road</option></select></label><label>Severity<select value={value.severity} onChange={(event) => onChange({ ...value, severity: event.target.value })}><option value="">All claimed severities</option><option value="MODERATE">Moderate</option></select></label><label>Status<select value={value.status} onChange={(event) => onChange({ ...value, status: event.target.value })}><option value="">All statuses</option><option value="VERIFIED">Verified</option></select></label></fieldset>; }

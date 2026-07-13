@@ -1,0 +1,192 @@
+Enum "IncidentStatus" {
+  "ACTIVE"
+  "MONITORING"
+  "RESOLVED"
+  "STALE"
+}
+
+Enum "LocationSource" {
+  "DEVICE_GPS"
+  "MANUAL"
+}
+
+Enum "ReportCategory" {
+  "ROAD_WATERLOGGING"
+  "FLOODED_ROAD"
+  "CLOGGED_DRAIN"
+  "OVERFLOWING_DRAIN"
+  "OPEN_MANHOLE"
+  "FALLEN_TREE"
+  "STRANDED_VEHICLE"
+  "UNDERPASS_FLOODING"
+  "OTHER"
+}
+
+Enum "Role" {
+  "USER"
+  "MODERATOR"
+  "ADMIN"
+}
+
+Enum "Severity" {
+  "UNKNOWN"
+  "MINOR"
+  "MODERATE"
+  "SEVERE"
+  "IMPASSABLE"
+}
+
+Enum "VerificationStatus" {
+  "SUBMITTED"
+  "PENDING_REVIEW"
+  "PROVISIONAL"
+  "VERIFIED"
+  "DISPUTED"
+  "REJECTED"
+  "RESOLVED"
+  "STALE"
+}
+
+Table "spatial_ref_sys" {
+  "srid" int4 [pk, not null, check: `(srid > 0) AND (srid <= 998999)`]
+  "auth_name" varchar(256)
+  "auth_srid" int4
+  "srtext" varchar(2048)
+  "proj4text" varchar(2048)
+}
+
+Table "_prisma_migrations" {
+  "id" varchar(36) [pk, not null]
+  "checksum" varchar(64) [not null]
+  "finished_at" timestamptz
+  "migration_name" varchar(255) [not null]
+  "logs" text
+  "rolled_back_at" timestamptz
+  "started_at" timestamptz [not null, default: `now()`]
+  "applied_steps_count" int4 [not null, default: 0]
+}
+
+Table "users" {
+  "id" uuid [pk, not null]
+  "name" varchar(100) [not null]
+  "email" varchar(254) [unique, not null, check: `(email)::text = lower((email)::text)`]
+  "password_hash" varchar(255) [not null]
+  "role" Role [not null, default: 'USER']
+  "is_active" bool [not null, default: true]
+  "failed_login_attempts" int4 [not null, check: `failed_login_attempts >= 0`, default: 0]
+  "failed_login_window_started_at" timestamptz
+  "locked_until" timestamptz
+  "created_at" timestamptz [not null, default: `CURRENT_TIMESTAMP`]
+  "updated_at" timestamptz [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (created_at, id) [type: btree, name: "users_created_at_id_idx"]
+    (role, is_active) [type: btree, name: "users_role_is_active_idx"]
+  }
+}
+
+Table "incidents" {
+  "id" uuid [pk, not null]
+  "category" ReportCategory [not null]
+  "severity" Severity [not null, default: 'UNKNOWN']
+  "confidence_score" numeric(5,4) [check: `(confidence_score IS NULL) OR ((confidence_score >= (0)::numeric) AND (confidence_score <= (1)::numeric))`]
+  "status" IncidentStatus [not null, default: 'ACTIVE']
+  "latitude" numeric(9,6) [not null, check: `(latitude >= ('-90'::integer)::numeric) AND (latitude <= (90)::numeric)`]
+  "longitude" numeric(9,6) [not null, check: `(longitude >= ('-180'::integer)::numeric) AND (longitude <= (180)::numeric)`]
+  "first_reported_at" timestamptz [not null]
+  "last_reported_at" timestamptz [not null]
+  "location" public.geography [not null]
+  "created_at" timestamptz [not null, default: `CURRENT_TIMESTAMP`]
+  "updated_at" timestamptz [not null, default: `CURRENT_TIMESTAMP`]
+
+  Checks {
+    `last_reported_at >= first_reported_at` [name: 'incidents_check']
+  }
+
+  Indexes {
+    category [type: btree, name: "incidents_category_idx"]
+    location [type: gist, name: "incidents_location_gist_idx"]
+    severity [type: btree, name: "incidents_severity_idx"]
+    (status, last_reported_at, id) [type: btree, name: "incidents_status_last_reported_at_id_idx"]
+  }
+}
+
+Table "refresh_sessions" {
+  "id" uuid [pk, not null]
+  "user_id" uuid [not null]
+  "token_hash" bpchar(64) [unique, not null]
+  "family_id" uuid [not null]
+  "expires_at" timestamptz [not null]
+  "revoked_at" timestamptz
+  "replaced_by_id" uuid [unique]
+  "created_at" timestamptz [not null, default: `CURRENT_TIMESTAMP`]
+  "ip_address" inet [not null]
+  "user_agent" varchar(512)
+
+  Indexes {
+    expires_at [type: btree, name: "refresh_sessions_expires_at_idx"]
+    (family_id, revoked_at) [type: btree, name: "refresh_sessions_family_id_revoked_at_idx"]
+    user_id [type: btree, name: "refresh_sessions_user_id_idx"]
+  }
+}
+
+Table "flood_reports" {
+  "id" uuid [pk, not null]
+  "reporter_id" uuid [not null]
+  "category" ReportCategory [not null]
+  "description" varchar(1000)
+  "severity_claim" Severity [not null, default: 'UNKNOWN']
+  "latitude" numeric(9,6) [not null, check: `(latitude >= ('-90'::integer)::numeric) AND (latitude <= (90)::numeric)`]
+  "longitude" numeric(9,6) [not null, check: `(longitude >= ('-180'::integer)::numeric) AND (longitude <= (180)::numeric)`]
+  "gps_accuracy" numeric(10,2)
+  "captured_at" timestamptz [not null]
+  "submitted_at" timestamptz [not null, default: `CURRENT_TIMESTAMP`]
+  "image_path" varchar(255) [not null]
+  "upload_source" varchar(16) [not null, default: 'WEB']
+  "verification_status" VerificationStatus [not null, default: 'SUBMITTED']
+  "incident_id" uuid
+  "location" public.geography [not null]
+  "created_at" timestamptz [not null, default: `CURRENT_TIMESTAMP`]
+  "updated_at" timestamptz [not null, default: `CURRENT_TIMESTAMP`]
+  "location_source" LocationSource [not null, default: 'DEVICE_GPS']
+
+  Checks {
+    `((location_source = 'DEVICE_GPS'::"LocationSource") AND (gps_accuracy IS NOT NULL) AND (gps_accuracy > (0)::numeric) AND (gps_accuracy <= (100000)::numeric)) OR ((location_source = 'MANUAL'::"LocationSource") AND (gps_accuracy IS NULL))` [name: 'flood_reports_location_source_accuracy_check']
+  }
+
+  Indexes {
+    category [type: btree, name: "flood_reports_category_idx"]
+    incident_id [type: btree, name: "flood_reports_incident_id_idx"]
+    location [type: gist, name: "flood_reports_location_gist_idx"]
+    (reporter_id, submitted_at, id) [type: btree, name: "flood_reports_reporter_id_submitted_at_id_idx"]
+    severity_claim [type: btree, name: "flood_reports_severity_claim_idx"]
+    (verification_status, submitted_at, id) [type: btree, name: "flood_reports_verification_status_submitted_at_id_idx"]
+  }
+}
+
+Table "audit_logs" {
+  "id" uuid [pk, not null]
+  "actor_id" uuid [not null]
+  "action" varchar(64) [not null]
+  "entity_type" varchar(32) [not null]
+  "entity_id" uuid [not null]
+  "metadata" jsonb [not null, default: `{}`]
+  "ip_address" inet [not null]
+  "created_at" timestamptz [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (action, created_at) [type: btree, name: "audit_logs_action_created_at_idx"]
+    (actor_id, created_at) [type: btree, name: "audit_logs_actor_id_created_at_idx"]
+    (entity_type, entity_id, created_at) [type: btree, name: "audit_logs_entity_type_entity_id_created_at_idx"]
+  }
+}
+
+Ref "audit_logs_actor_id_fkey":"users"."id" < "audit_logs"."actor_id" [delete: restrict]
+
+Ref "flood_reports_incident_id_fkey":"incidents"."id" < "flood_reports"."incident_id" [delete: set null]
+
+Ref "flood_reports_reporter_id_fkey":"users"."id" < "flood_reports"."reporter_id" [delete: restrict]
+
+Ref "refresh_sessions_replaced_by_id_fkey":"refresh_sessions"."id" < "refresh_sessions"."replaced_by_id" [delete: set null]
+
+Ref "refresh_sessions_user_id_fkey":"users"."id" < "refresh_sessions"."user_id" [delete: restrict]

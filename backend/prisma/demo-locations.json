@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "cityLabel": "Gurugram-Sohna Demo Corridor",
+  "defaultCenter": {
+    "latitude": 28.33505,
+    "longitude": 77.05345,
+    "zoom": 10
+  },
+  "points": [
+    {
+      "id": "P01",
+      "label": "K R Mangalam University Main Gate",
+      "latitude": 28.2478,
+      "longitude": 77.0647
+    },
+    {
+      "id": "P02",
+      "label": "Sohna Road University Approach",
+      "latitude": 28.249,
+      "longitude": 77.0635
+    },
+    {
+      "id": "P03",
+      "label": "K R Mangalam University Bus Stop",
+      "latitude": 28.2502,
+      "longitude": 77.0623
+    },
+    {
+      "id": "P04",
+      "label": "Sohna Road Public Junction",
+      "latitude": 28.2514,
+      "longitude": 77.0611
+    },
+    {
+      "id": "P05",
+      "label": "Subhash Chowk",
+      "latitude": 28.4223,
+      "longitude": 77.0422
+    },
+    {
+      "id": "P06",
+      "label": "Subhash Chowk Service Road",
+      "latitude": 28.4235,
+      "longitude": 77.041
+    },
+    {
+      "id": "P07",
+      "label": "Sector 47 Market Entrance",
+      "latitude": 28.4192,
+      "longitude": 77.0418
+    },
+    {
+      "id": "P08",
+      "label": "Netaji Subhash Marg Junction",
+      "latitude": 28.4208,
+      "longitude": 77.0441
+    }
+  ]
+}

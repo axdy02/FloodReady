@@ -1,0 +1,2 @@
+import type { ReportDto } from "@/lib/api/contracts";
+export function ReportDetail({ report }: { report: ReportDto }) { return <main><h1>{report.category}</h1><p>Claimed severity: {report.severityClaim}</p><p>Status: {report.verificationStatus === "SUBMITTED" ? "Submitted / unverified" : report.verificationStatus}</p><p>Captured: {report.capturedAt}</p><p>Submitted: {report.submittedAt}</p>{report.description ? <p>{report.description}</p> : null}</main>; }

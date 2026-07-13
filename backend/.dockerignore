@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-demo
+.env
+.env.*
+.acceptance
+.acceptance/
+tests
+uploads
+src/generated
+tests
+uploads

@@ -1,0 +1,7 @@
+Table "spatial_ref_sys" {
+  "srid" int4 [pk, not null, check: `(srid > 0) AND (srid <= 998999)`]
+  "auth_name" varchar(256)
+  "auth_srid" int4
+  "srtext" varchar(2048)
+  "proj4text" varchar(2048)
+}

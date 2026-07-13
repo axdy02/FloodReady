@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum ReportCategory {
+  ROAD_WATERLOGGING
+  FLOODED_ROAD
+  CLOGGED_DRAIN
+  OVERFLOWING_DRAIN
+  OPEN_MANHOLE
+  FALLEN_TREE
+  STRANDED_VEHICLE
+  UNDERPASS_FLOODING
+  OTHER
+}
+
+enum Severity {
+  UNKNOWN
+  MINOR
+  MODERATE
+  SEVERE
+  IMPASSABLE
+}
+
+enum VerificationStatus {
+  SUBMITTED
+  PENDING_REVIEW
+  PROVISIONAL
+  VERIFIED
+  DISPUTED
+  REJECTED
+  RESOLVED
+  STALE
+}
+
+enum IncidentStatus {
+  ACTIVE
+  MONITORING
+  RESOLVED
+  STALE
+}
+
+enum LocationSource {
+  DEVICE_GPS
+  MANUAL
+}
+
+model User {
+  id                        String           @id @default(uuid()) @db.Uuid
+  name                      String           @db.VarChar(100)
+  email                     String           @unique @db.VarChar(254)
+  passwordHash              String           @map("password_hash") @db.VarChar(255)
+  role                      Role             @default(USER)
+  isActive                  Boolean          @default(true) @map("is_active")
+  failedLoginAttempts       Int              @default(0) @map("failed_login_attempts")
+  failedLoginWindowStartedAt DateTime?       @map("failed_login_window_started_at") @db.Timestamptz(3)
+  lockedUntil               DateTime?        @map("locked_until") @db.Timestamptz(3)
+  createdAt                 DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                 DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions                  RefreshSession[]
+  reports                   FloodReport[]
+  audits                    AuditLog[]
+
+  @@index([role, isActive])
+  @@index([createdAt, id])
+  @@map("users")
+}
+
+model RefreshSession {
+  id           String          @id @default(uuid()) @db.Uuid
+  userId       String          @map("user_id") @db.Uuid
+  tokenHash    String          @unique @map("token_hash") @db.Char(64)
+  familyId     String          @map("family_id") @db.Uuid
+  expiresAt    DateTime        @map("expires_at") @db.Timestamptz(3)
+  revokedAt    DateTime?       @map("revoked_at") @db.Timestamptz(3)
+  replacedById String?         @unique @map("replaced_by_id") @db.Uuid
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  ipAddress    String          @map("ip_address") @db.Inet
+  userAgent    String?         @map("user_agent") @db.VarChar(512)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  replacedBy   RefreshSession? @relation("SessionReplacement", fields: [replacedById], references: [id], onDelete: SetNull)
+  replaced     RefreshSession? @relation("SessionReplacement")
+
+  @@index([userId])
+  @@index([familyId, revokedAt])
+  @@index([expiresAt])
+  @@map("refresh_sessions")
+}
+
+model FloodReport {
+  id                 String             @id @default(uuid()) @db.Uuid
+  reporterId         String             @map("reporter_id") @db.Uuid
+  category           ReportCategory
+  description        String?            @db.VarChar(1000)
+  severityClaim      Severity           @default(UNKNOWN) @map("severity_claim")
+  latitude           Decimal            @db.Decimal(9, 6)
+  longitude          Decimal            @db.Decimal(9, 6)
+  gpsAccuracy        Decimal?           @map("gps_accuracy") @db.Decimal(10, 2)
+  locationSource     LocationSource     @default(DEVICE_GPS) @map("location_source")
+  capturedAt         DateTime           @map("captured_at") @db.Timestamptz(3)
+  submittedAt        DateTime           @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  imagePath          String             @map("image_path") @db.VarChar(255)
+  uploadSource       String             @default("WEB") @map("upload_source") @db.VarChar(16)
+  verificationStatus VerificationStatus @default(SUBMITTED) @map("verification_status")
+  incidentId         String?            @map("incident_id") @db.Uuid
+  location           Unsupported("geography(Point,4326)") @default(dbgenerated())
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  reporter           User               @relation(fields: [reporterId], references: [id], onDelete: Restrict)
+  incident           Incident?          @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+
+  @@index([reporterId, submittedAt, id])
+  @@index([verificationStatus, submittedAt, id])
+  @@index([category])
+  @@index([severityClaim])
+  @@index([incidentId])
+  @@index([location(ops: raw("gist_geography_ops"))], type: Gist, map: "flood_reports_location_gist_idx")
+  @@map("flood_reports")
+}
+
+model Incident {
+  id              String         @id @default(uuid()) @db.Uuid
+  category        ReportCategory
+  severity        Severity       @default(UNKNOWN)
+  confidenceScore Decimal?       @map("confidence_score") @db.Decimal(5, 4)
+  status          IncidentStatus @default(ACTIVE)
+  latitude        Decimal        @db.Decimal(9, 6)
+  longitude       Decimal        @db.Decimal(9, 6)
+  firstReportedAt DateTime       @map("first_reported_at") @db.Timestamptz(3)
+  lastReportedAt  DateTime       @map("last_reported_at") @db.Timestamptz(3)
+  location        Unsupported("geography(Point,4326)") @default(dbgenerated())
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  reports         FloodReport[]
+
+  @@index([status, lastReportedAt, id])
+  @@index([category])
+  @@index([severity])
+  @@index([location(ops: raw("gist_geography_ops"))], type: Gist, map: "incidents_location_gist_idx")
+  @@map("incidents")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String   @map("actor_id") @db.Uuid
+  action     String   @db.VarChar(64)
+  entityType String   @map("entity_type") @db.VarChar(32)
+  entityId   String   @map("entity_id") @db.Uuid
+  metadata   Json     @default("{}")
+  ipAddress  String   @map("ip_address") @db.Inet
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}

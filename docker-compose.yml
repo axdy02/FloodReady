@@ -1,0 +1,213 @@
+services:
+  db:
+    image: postgis/postgis:18-3.6@sha256:f248a10d133f63d01aefab324f3462d7e1002e9cc1b65c6585626f6cb7a3d85c
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: ./backend
+      target: migration
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+      target: runtime
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DB_POOL_MAX: ${DB_POOL_MAX:?DB_POOL_MAX is required}
+      DB_CONNECTION_TIMEOUT_MS: ${DB_CONNECTION_TIMEOUT_MS:?DB_CONNECTION_TIMEOUT_MS is required}
+      DB_IDLE_TIMEOUT_MS: ${DB_IDLE_TIMEOUT_MS:?DB_IDLE_TIMEOUT_MS is required}
+      DB_QUERY_TIMEOUT_MS: ${DB_QUERY_TIMEOUT_MS:?DB_QUERY_TIMEOUT_MS is required}
+      ACCESS_TOKEN_SECRET: ${ACCESS_TOKEN_SECRET:?ACCESS_TOKEN_SECRET is required}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:?REFRESH_TOKEN_SECRET is required}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:?ACCESS_TOKEN_TTL is required}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:?REFRESH_TOKEN_TTL is required}
+      JWT_ISSUER: ${JWT_ISSUER:?JWT_ISSUER is required}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:?JWT_AUDIENCE is required}
+      PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:?PUBLIC_API_ORIGIN is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN?COOKIE_DOMAIN must be declared}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:?MAX_UPLOAD_SIZE_MB is required}
+      MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:?MAX_IMAGE_PIXELS is required}
+      UPLOAD_PROCESSING_CONCURRENCY: ${UPLOAD_PROCESSING_CONCURRENCY:?UPLOAD_PROCESSING_CONCURRENCY is required}
+      UPLOAD_QUEUE_MAX: ${UPLOAD_QUEUE_MAX:?UPLOAD_QUEUE_MAX is required}
+      JSON_BODY_LIMIT_KB: ${JSON_BODY_LIMIT_KB:?JSON_BODY_LIMIT_KB is required}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:?RATE_LIMIT_WINDOW_MS is required}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:?RATE_LIMIT_MAX_REQUESTS is required}
+      AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:?AUTH_RATE_LIMIT_WINDOW_MS is required}
+      AUTH_RATE_LIMIT_MAX_REQUESTS: ${AUTH_RATE_LIMIT_MAX_REQUESTS:?AUTH_RATE_LIMIT_MAX_REQUESTS is required}
+      REPORT_RATE_LIMIT_WINDOW_MS: ${REPORT_RATE_LIMIT_WINDOW_MS:?REPORT_RATE_LIMIT_WINDOW_MS is required}
+      REPORT_RATE_LIMIT_MAX_REQUESTS: ${REPORT_RATE_LIMIT_MAX_REQUESTS:?REPORT_RATE_LIMIT_MAX_REQUESTS is required}
+      LOGIN_FAILURE_WINDOW_MS: ${LOGIN_FAILURE_WINDOW_MS:?LOGIN_FAILURE_WINDOW_MS is required}
+      LOGIN_FAILURE_MAX: ${LOGIN_FAILURE_MAX:?LOGIN_FAILURE_MAX is required}
+      LOGIN_LOCK_MS: ${LOGIN_LOCK_MS:?LOGIN_LOCK_MS is required}
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:?TRUST_PROXY_HOPS is required}
+      SHUTDOWN_TIMEOUT_MS: ${SHUTDOWN_TIMEOUT_MS:?SHUTDOWN_TIMEOUT_MS is required}
+      LOG_LEVEL: ${LOG_LEVEL:?LOG_LEVEL is required}
+      NODE_ENV: development
+      PORT: "3000"
+      UPLOAD_DIRECTORY: /app/uploads
+    ports:
+      - "127.0.0.1:3001:3000"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/v1/health/ready').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  ai-service:
+    build:
+      context: ./ai-service
+      target: runtime
+    environment:
+      AI_ENV: ${AI_ENV:?AI_ENV is required}
+      AI_HOST: ${AI_HOST:?AI_HOST is required}
+      AI_PORT: ${AI_PORT:?AI_PORT is required}
+      AI_LOG_LEVEL: ${AI_LOG_LEVEL:?AI_LOG_LEVEL is required}
+      AI_TRUSTED_HOSTS: ${AI_TRUSTED_HOSTS:?AI_TRUSTED_HOSTS is required}
+      AI_BODY_LIMIT_BYTES: ${AI_BODY_LIMIT_BYTES:?AI_BODY_LIMIT_BYTES is required}
+      AI_SHUTDOWN_TIMEOUT_SECONDS: ${AI_SHUTDOWN_TIMEOUT_SECONDS:?AI_SHUTDOWN_TIMEOUT_SECONDS is required}
+    ports:
+      - "127.0.0.1:8000:8000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      target: runtime
+      args:
+        FRONTEND_ENV: ${FRONTEND_ENV:?FRONTEND_ENV is required}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?NEXT_PUBLIC_API_BASE_URL is required}
+        INTERNAL_API_BASE_URL: ${INTERNAL_API_BASE_URL:?INTERNAL_API_BASE_URL is required}
+        NEXT_PUBLIC_APP_ORIGIN: ${NEXT_PUBLIC_APP_ORIGIN:?NEXT_PUBLIC_APP_ORIGIN is required}
+        NEXT_PUBLIC_MAP_STYLE_URL: ${NEXT_PUBLIC_MAP_STYLE_URL:?NEXT_PUBLIC_MAP_STYLE_URL is required}
+        NEXT_PUBLIC_MAP_ATTRIBUTION: ${NEXT_PUBLIC_MAP_ATTRIBUTION:?NEXT_PUBLIC_MAP_ATTRIBUTION is required}
+        NEXT_PUBLIC_MAP_CONNECT_ORIGINS: ${NEXT_PUBLIC_MAP_CONNECT_ORIGINS:?NEXT_PUBLIC_MAP_CONNECT_ORIGINS is required}
+        NEXT_PUBLIC_MAP_IMAGE_ORIGINS: ${NEXT_PUBLIC_MAP_IMAGE_ORIGINS:?NEXT_PUBLIC_MAP_IMAGE_ORIGINS is required}
+        NEXT_PUBLIC_DEFAULT_MAP_LATITUDE: ${NEXT_PUBLIC_DEFAULT_MAP_LATITUDE:?NEXT_PUBLIC_DEFAULT_MAP_LATITUDE is required}
+        NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE: ${NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE:?NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE is required}
+        NEXT_PUBLIC_DEFAULT_MAP_ZOOM: ${NEXT_PUBLIC_DEFAULT_MAP_ZOOM:?NEXT_PUBLIC_DEFAULT_MAP_ZOOM is required}
+        NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB: ${NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB:?NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB is required}
+    environment:
+      FRONTEND_ENV: ${FRONTEND_ENV:?FRONTEND_ENV is required}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?NEXT_PUBLIC_API_BASE_URL is required}
+      INTERNAL_API_BASE_URL: ${INTERNAL_API_BASE_URL:?INTERNAL_API_BASE_URL is required}
+      NEXT_PUBLIC_APP_ORIGIN: ${NEXT_PUBLIC_APP_ORIGIN:?NEXT_PUBLIC_APP_ORIGIN is required}
+      NEXT_PUBLIC_MAP_STYLE_URL: ${NEXT_PUBLIC_MAP_STYLE_URL:?NEXT_PUBLIC_MAP_STYLE_URL is required}
+      NEXT_PUBLIC_MAP_ATTRIBUTION: ${NEXT_PUBLIC_MAP_ATTRIBUTION:?NEXT_PUBLIC_MAP_ATTRIBUTION is required}
+      NEXT_PUBLIC_MAP_CONNECT_ORIGINS: ${NEXT_PUBLIC_MAP_CONNECT_ORIGINS:?NEXT_PUBLIC_MAP_CONNECT_ORIGINS is required}
+      NEXT_PUBLIC_MAP_IMAGE_ORIGINS: ${NEXT_PUBLIC_MAP_IMAGE_ORIGINS:?NEXT_PUBLIC_MAP_IMAGE_ORIGINS is required}
+      NEXT_PUBLIC_DEFAULT_MAP_LATITUDE: ${NEXT_PUBLIC_DEFAULT_MAP_LATITUDE:?NEXT_PUBLIC_DEFAULT_MAP_LATITUDE is required}
+      NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE: ${NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE:?NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE is required}
+      NEXT_PUBLIC_DEFAULT_MAP_ZOOM: ${NEXT_PUBLIC_DEFAULT_MAP_ZOOM:?NEXT_PUBLIC_DEFAULT_MAP_ZOOM is required}
+      NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB: ${NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB:?NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB is required}
+      PORT: "3000"
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  demo-seed:
+    profiles: [demo]
+    build:
+      context: ./backend
+      target: demo-seed
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DB_POOL_MAX: ${DB_POOL_MAX:?DB_POOL_MAX is required}
+      DB_CONNECTION_TIMEOUT_MS: ${DB_CONNECTION_TIMEOUT_MS:?DB_CONNECTION_TIMEOUT_MS is required}
+      DB_IDLE_TIMEOUT_MS: ${DB_IDLE_TIMEOUT_MS:?DB_IDLE_TIMEOUT_MS is required}
+      DB_QUERY_TIMEOUT_MS: ${DB_QUERY_TIMEOUT_MS:?DB_QUERY_TIMEOUT_MS is required}
+      ACCESS_TOKEN_SECRET: ${ACCESS_TOKEN_SECRET:?ACCESS_TOKEN_SECRET is required}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:?REFRESH_TOKEN_SECRET is required}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:?ACCESS_TOKEN_TTL is required}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:?REFRESH_TOKEN_TTL is required}
+      JWT_ISSUER: ${JWT_ISSUER:?JWT_ISSUER is required}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:?JWT_AUDIENCE is required}
+      PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:?PUBLIC_API_ORIGIN is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN?COOKIE_DOMAIN must be declared}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:?MAX_UPLOAD_SIZE_MB is required}
+      MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:?MAX_IMAGE_PIXELS is required}
+      UPLOAD_PROCESSING_CONCURRENCY: ${UPLOAD_PROCESSING_CONCURRENCY:?UPLOAD_PROCESSING_CONCURRENCY is required}
+      UPLOAD_QUEUE_MAX: ${UPLOAD_QUEUE_MAX:?UPLOAD_QUEUE_MAX is required}
+      JSON_BODY_LIMIT_KB: ${JSON_BODY_LIMIT_KB:?JSON_BODY_LIMIT_KB is required}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:?RATE_LIMIT_WINDOW_MS is required}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:?RATE_LIMIT_MAX_REQUESTS is required}
+      AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:?AUTH_RATE_LIMIT_WINDOW_MS is required}
+      AUTH_RATE_LIMIT_MAX_REQUESTS: ${AUTH_RATE_LIMIT_MAX_REQUESTS:?AUTH_RATE_LIMIT_MAX_REQUESTS is required}
+      REPORT_RATE_LIMIT_WINDOW_MS: ${REPORT_RATE_LIMIT_WINDOW_MS:?REPORT_RATE_LIMIT_WINDOW_MS is required}
+      REPORT_RATE_LIMIT_MAX_REQUESTS: ${REPORT_RATE_LIMIT_MAX_REQUESTS:?REPORT_RATE_LIMIT_MAX_REQUESTS is required}
+      LOGIN_FAILURE_WINDOW_MS: ${LOGIN_FAILURE_WINDOW_MS:?LOGIN_FAILURE_WINDOW_MS is required}
+      LOGIN_FAILURE_MAX: ${LOGIN_FAILURE_MAX:?LOGIN_FAILURE_MAX is required}
+      LOGIN_LOCK_MS: ${LOGIN_LOCK_MS:?LOGIN_LOCK_MS is required}
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:?TRUST_PROXY_HOPS is required}
+      SHUTDOWN_TIMEOUT_MS: ${SHUTDOWN_TIMEOUT_MS:?SHUTDOWN_TIMEOUT_MS is required}
+      LOG_LEVEL: ${LOG_LEVEL:?LOG_LEVEL is required}
+      NODE_ENV: development
+      PORT: "3000"
+      UPLOAD_DIRECTORY: /app/uploads
+      DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED?DEMO_SEED_ENABLED must be declared}
+      DEMO_CITIZEN_PASSWORD: ${DEMO_CITIZEN_PASSWORD?DEMO_CITIZEN_PASSWORD must be declared}
+      DEMO_MODERATOR_PASSWORD: ${DEMO_MODERATOR_PASSWORD?DEMO_MODERATOR_PASSWORD must be declared}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD?DEMO_ADMIN_PASSWORD must be declared}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+volumes:
+  postgres_data:
+  uploads_data:

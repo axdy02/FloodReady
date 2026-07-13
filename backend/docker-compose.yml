@@ -1,0 +1,90 @@
+services:
+  db:
+    image: postgis/postgis:18-3.6@sha256:f248a10d133f63d01aefab324f3462d7e1002e9cc1b65c6585626f6cb7a3d85c
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:?POSTGRES_USER is required} -d ${POSTGRES_DB:?POSTGRES_DB is required}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      target: migration
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: .
+      target: runtime
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DB_POOL_MAX: ${DB_POOL_MAX:?DB_POOL_MAX is required}
+      DB_CONNECTION_TIMEOUT_MS: ${DB_CONNECTION_TIMEOUT_MS:?DB_CONNECTION_TIMEOUT_MS is required}
+      DB_IDLE_TIMEOUT_MS: ${DB_IDLE_TIMEOUT_MS:?DB_IDLE_TIMEOUT_MS is required}
+      DB_QUERY_TIMEOUT_MS: ${DB_QUERY_TIMEOUT_MS:?DB_QUERY_TIMEOUT_MS is required}
+      ACCESS_TOKEN_SECRET: ${ACCESS_TOKEN_SECRET:?ACCESS_TOKEN_SECRET is required}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:?REFRESH_TOKEN_SECRET is required}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:?ACCESS_TOKEN_TTL is required}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:?REFRESH_TOKEN_TTL is required}
+      JWT_ISSUER: ${JWT_ISSUER:?JWT_ISSUER is required}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:?JWT_AUDIENCE is required}
+      PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:?PUBLIC_API_ORIGIN is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN?COOKIE_DOMAIN is required}
+      UPLOAD_DIRECTORY: /app/uploads
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:?MAX_UPLOAD_SIZE_MB is required}
+      MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:?MAX_IMAGE_PIXELS is required}
+      UPLOAD_PROCESSING_CONCURRENCY: ${UPLOAD_PROCESSING_CONCURRENCY:?UPLOAD_PROCESSING_CONCURRENCY is required}
+      UPLOAD_QUEUE_MAX: ${UPLOAD_QUEUE_MAX:?UPLOAD_QUEUE_MAX is required}
+      JSON_BODY_LIMIT_KB: ${JSON_BODY_LIMIT_KB:?JSON_BODY_LIMIT_KB is required}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:?RATE_LIMIT_WINDOW_MS is required}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:?RATE_LIMIT_MAX_REQUESTS is required}
+      AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:?AUTH_RATE_LIMIT_WINDOW_MS is required}
+      AUTH_RATE_LIMIT_MAX_REQUESTS: ${AUTH_RATE_LIMIT_MAX_REQUESTS:?AUTH_RATE_LIMIT_MAX_REQUESTS is required}
+      REPORT_RATE_LIMIT_WINDOW_MS: ${REPORT_RATE_LIMIT_WINDOW_MS:?REPORT_RATE_LIMIT_WINDOW_MS is required}
+      REPORT_RATE_LIMIT_MAX_REQUESTS: ${REPORT_RATE_LIMIT_MAX_REQUESTS:?REPORT_RATE_LIMIT_MAX_REQUESTS is required}
+      LOGIN_FAILURE_WINDOW_MS: ${LOGIN_FAILURE_WINDOW_MS:?LOGIN_FAILURE_WINDOW_MS is required}
+      LOGIN_FAILURE_MAX: ${LOGIN_FAILURE_MAX:?LOGIN_FAILURE_MAX is required}
+      LOGIN_LOCK_MS: ${LOGIN_LOCK_MS:?LOGIN_LOCK_MS is required}
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:?TRUST_PROXY_HOPS is required}
+      SHUTDOWN_TIMEOUT_MS: ${SHUTDOWN_TIMEOUT_MS:?SHUTDOWN_TIMEOUT_MS is required}
+      LOG_LEVEL: ${LOG_LEVEL:?LOG_LEVEL is required}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - uploads:/app/uploads
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  uploads:

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-demo/
+src/generated/
+.env
+.env.*
+!.env.example
+uploads/*
+!uploads/.gitkeep
+.acceptance/
