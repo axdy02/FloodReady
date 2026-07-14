@@ -3,17 +3,19 @@
 import { Bell, CheckCircle2, Globe2, LoaderCircle, LockKeyhole, Moon, RefreshCw, Server, XCircle } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api/client";
+import { BlurText } from "@/components/motion/blur-text";
+import { Reveal } from "@/components/motion/reveal";
 
 type ServiceStatus = "idle" | "checking" | "online" | "offline";
 
 export default function SettingsPage() {
   return <main className="mx-auto max-w-4xl px-5 py-10">
     <p className="text-xs font-semibold tracking-[.18em] text-blue-400">PREFERENCES</p>
-    <h1 className="mt-2 text-3xl font-semibold tracking-[-.04em]">Settings</h1>
+    <BlurText as="h1" text="Settings" delay={140} className="mt-2 text-3xl font-semibold tracking-[-.04em]" />
     <p className="mt-2 text-sm text-zinc-500">Control how FloodReady communicates with you and protects your account.</p>
     <div className="mt-8 space-y-3">
-      <ConnectionCheck />
-      <Setting icon={<Bell className="size-5" />} title="Notifications" text="Critical nearby incidents, route changes, and verification updates." control={<button className="rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-semibold">Enabled</button>} />
+      <Reveal><ConnectionCheck /></Reveal>
+      <Setting icon={<Bell className="size-5" />} title="Notifications" text="Critical nearby incidents, route changes, and verification updates." control={<button className="rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-semibold text-white">Enabled</button>} />
       <Setting icon={<Moon className="size-5" />} title="Appearance" text="FloodReady uses a dark map interface optimized for night-time visibility." control={<select className="rounded-lg border border-white/10 bg-[#111113] px-3 py-1.5 text-xs"><option>Dark</option><option>System</option></select>} />
       <Setting icon={<Globe2 className="size-5" />} title="Language" text="Choose the language used for alerts and navigation guidance." control={<select className="rounded-lg border border-white/10 bg-[#111113] px-3 py-1.5 text-xs"><option>English</option><option>Hindi</option></select>} />
       <Setting icon={<LockKeyhole className="size-5" />} title="Privacy and security" text="Manage your profile visibility, password, and active sessions." control={<button className="text-xs font-semibold text-blue-300">Manage</button>} />
@@ -57,5 +59,5 @@ function StatusRow({ label, detail, status }: { label: string; detail: string; s
 }
 
 function Setting({ icon, title, text, control }: { icon: React.ReactNode; title: string; text: string; control: React.ReactNode }) {
-  return <section className="surface-card flex flex-wrap items-center gap-4 rounded-2xl p-5"><span className="grid size-10 place-items-center rounded-xl bg-blue-500/10 text-blue-300">{icon}</span><div className="min-w-48 flex-1"><h2 className="text-sm font-semibold">{title}</h2><p className="mt-1 text-xs leading-5 text-zinc-500">{text}</p></div>{control}</section>;
+  return <Reveal><section className="surface-card flex flex-wrap items-center gap-4 rounded-2xl p-5"><span className="grid size-10 place-items-center rounded-xl bg-blue-500/10 text-blue-300">{icon}</span><div className="min-w-48 flex-1"><h2 className="text-sm font-semibold">{title}</h2><p className="mt-1 text-xs leading-5 text-zinc-500">{text}</p></div>{control}</section></Reveal>;
 }

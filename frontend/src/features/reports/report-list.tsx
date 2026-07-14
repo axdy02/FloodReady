@@ -9,6 +9,9 @@ import { useIncidentsQuery } from "@/features/incidents/queries";
 import { type MapLayerState, MapCanvas } from "@/features/map/map-canvas";
 import { useOwnReportsQuery } from "@/features/reports/queries";
 import { loadClientEnvironment } from "@/lib/env/client";
+import { BlurText } from "@/components/motion/blur-text";
+import { Counter } from "@/components/motion/counter";
+import { Reveal } from "@/components/motion/reveal";
 
 const mapLayers: MapLayerState = { roads: true, markers: true, heatmap: false, shelters: false, weather: false, traffic: false };
 
@@ -39,22 +42,22 @@ export function ReportList() {
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div>
         <p className="text-xs font-semibold tracking-[.18em] text-blue-400">INCIDENT MANAGEMENT · {mode.toUpperCase()} DATA</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-.04em]">Reports</h1>
+        <BlurText as="h1" text="Reports" delay={140} className="mt-2 text-3xl font-semibold tracking-[-.04em]" />
         <p className="mt-2 text-sm text-zinc-500">{mode === "demo" ? `${demoDisplayReports.length} connected demo reports used throughout FloodReady.` : "Reports submitted from your connected live account."}</p>
       </div>
       <Link href="/reports/new" className="rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white">+ New report</Link>
     </div>
     {mode === "live" ? <p className="mt-5 rounded-xl border border-blue-400/15 bg-blue-500/[.06] px-3 py-2 text-xs text-blue-200">{liveNotice}</p> : null}
-    <section className="mt-5 rounded-2xl border border-white/[.08] bg-white/[.02] p-3">
+    <Reveal className="mt-5"><section className="rounded-2xl border border-white/[.08] bg-white/[.02] p-3">
       <div className="flex flex-wrap gap-2">
         <label className="flex min-w-48 flex-1 items-center gap-2 rounded-xl border border-white/[.08] bg-black/20 px-3"><Search className="size-4 text-zinc-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search reports" placeholder="Search reports" className="w-full bg-transparent py-2.5 text-sm outline-none placeholder:text-zinc-600" /></label>
         <Filter value={severity} onChange={setSeverity} options={["All severities", "CRITICAL", "HIGH", "MODERATE", "LOW", "IMPASSABLE", "SEVERE", "MINOR"]} />
         <Filter value={status} onChange={setStatus} options={["All statuses", "PENDING", "PENDING_REVIEW", "VERIFIED", "REJECTED", "RESOLVED", "SUBMITTED", "PROVISIONAL", "DISPUTED", "STALE"]} />
         <div className="flex rounded-xl border border-white/[.08] p-1"><button onClick={() => setView("list")} className={`rounded-lg px-3 py-1.5 text-xs ${view === "list" ? "bg-white text-zinc-950" : "text-zinc-500"}`}>List</button><button onClick={() => setView("map")} className={`rounded-lg px-3 py-1.5 text-xs ${view === "map" ? "bg-white text-zinc-950" : "text-zinc-500"}`}>Map</button></div>
       </div>
-    </section>
-    {view === "map" ? <section className="relative mt-4 h-[38rem] overflow-hidden rounded-2xl border border-white/[.08]"><MapCanvas viewport={{ latitude: env.NEXT_PUBLIC_DEFAULT_MAP_LATITUDE, longitude: env.NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE, zoom: env.NEXT_PUBLIC_DEFAULT_MAP_ZOOM }} attribution={env.NEXT_PUBLIC_MAP_ATTRIBUTION} styleUrl={env.NEXT_PUBLIC_MAP_STYLE_URL} incidents={mapRecords} layers={mapLayers} selectedIncidentId={selected?.id} onIncidentSelect={(id) => setSelected(records.find((record) => record.id === id) ?? null)} /></section> : <ReportTable records={records} onSelect={setSelected} />}
-    <p className="mt-4 text-xs text-zinc-500">Showing {records.length} {mode === "demo" ? "demo" : "live"} report{records.length === 1 ? "" : "s"}.</p>
+    </section></Reveal>
+    {view === "map" ? <Reveal className="mt-4"><section className="relative h-[38rem] overflow-hidden rounded-2xl border border-white/[.08]"><MapCanvas viewport={{ latitude: env.NEXT_PUBLIC_DEFAULT_MAP_LATITUDE, longitude: env.NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE, zoom: env.NEXT_PUBLIC_DEFAULT_MAP_ZOOM }} attribution={env.NEXT_PUBLIC_MAP_ATTRIBUTION} styleUrl={env.NEXT_PUBLIC_MAP_STYLE_URL} incidents={mapRecords} layers={mapLayers} selectedIncidentId={selected?.id} onIncidentSelect={(id) => setSelected(records.find((record) => record.id === id) ?? null)} /></section></Reveal> : <ReportTable records={records} onSelect={setSelected} />}
+    <p className="mt-4 flex items-center gap-1 text-xs text-zinc-500">Showing <Counter value={records.length} fontSize={13} /> {mode === "demo" ? "demo" : "live"} report{records.length === 1 ? "" : "s"}.</p>
     {selected ? <Detail record={selected} onClose={() => setSelected(null)} /> : null}
   </main>;
 }
