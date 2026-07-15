@@ -1,0 +1,63 @@
+erDiagram
+  USERS ||--o{ REFRESH_SESSIONS : owns
+  REFRESH_SESSIONS o|--|| REFRESH_SESSIONS : replaces
+  USERS ||--o{ REPORT_DRAFTS : creates
+  REPORT_DRAFTS ||--o| AI_ANALYSES : has_during_review
+  USERS ||--o{ FLOOD_REPORTS : submits
+  FLOOD_REPORTS ||--o| AI_ANALYSES : owns_after_submit
+  INCIDENTS o|--o{ FLOOD_REPORTS : groups
+  USERS ||--o{ AUDIT_LOGS : acts
+
+  USERS {
+    uuid id PK
+    varchar name
+    varchar email UK
+    enum role
+  }
+  REPORT_DRAFTS {
+    uuid id PK
+    uuid reporter_id FK
+    enum severity_claim
+    varchar image_path
+    varchar image_mime
+    int image_size
+    char image_sha256
+    timestamptz expires_at
+  }
+  AI_ANALYSES {
+    uuid id PK
+    uuid draft_id FK_UK
+    uuid report_id FK_UK
+    enum status
+    enum suggested_severity
+    decimal confidence_score
+    decimal validation_score
+    varchar validation_outcome
+  }
+  FLOOD_REPORTS {
+    uuid id PK
+    uuid reporter_id FK
+    enum severity_claim
+    enum final_severity
+    boolean ai_used
+    varchar image_path
+    geography location
+    enum verification_status
+  }
+  INCIDENTS {
+    uuid id PK
+    enum severity
+    geography location
+  }
+  AUDIT_LOGS {
+    uuid id PK
+    uuid actor_id FK
+    varchar entity_type
+    uuid entity_id
+  }
+  REFRESH_SESSIONS {
+    uuid id PK
+    uuid user_id FK
+    char token_hash UK
+    uuid replaced_by_id FK_UK
+  }

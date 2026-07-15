@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1080" viewBox="0 0 1600 1080" role="img" aria-labelledby="title desc">
+  <title id="title">FloodReady Milestone 2 database schema</title>
+  <desc id="desc">Entity relationship diagram for users, sessions, report drafts, AI analyses, flood reports, incidents, and audit logs in one PostgreSQL PostGIS public schema.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0f172a" flood-opacity=".12"/></filter>
+    <style>
+      text { font-family: Inter, Segoe UI, Arial, sans-serif; fill:#0f172a; }
+      .title { font-size:34px; font-weight:700; }
+      .subtitle { font-size:17px; fill:#475569; }
+      .entity { font-size:23px; font-weight:700; }
+      .sub { font-size:14px; fill:#475569; }
+      .field { font-size:14px; }
+      .note { font-size:12px; fill:#475569; }
+      .rel { font-size:13px; font-weight:700; fill:#334155; }
+      .head { font-size:12px; font-weight:700; letter-spacing:.6px; fill:#475569; }
+      .line { stroke:#e2e8f0; stroke-width:1; }
+    </style>
+  </defs>
+  <rect width="1600" height="1080" fill="#ffffff"/>
+  <text x="54" y="58" class="title">FloodReady Milestone 2 database schema</text>
+  <text x="54" y="88" class="subtitle">Prisma schema + migrations: one PostgreSQL/PostGIS public schema owned by Backend 1</text>
+  <rect x="1140" y="37" width="405" height="45" rx="23" fill="#ecfdf5" stroke="#86efac"/>
+  <text x="1342" y="65" text-anchor="middle" font-size="14" font-weight="700" fill="#166534">No database access from Backend 2</text>
+
+  <!-- Users -->
+  <rect x="55" y="170" width="300" height="235" rx="18" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="55" y="170" width="300" height="58" rx="18" fill="#e2e8f0"/><path d="M55 210h300v18H55z" fill="#e2e8f0"/>
+  <text x="80" y="205" class="entity">users</text><text x="80" y="250" class="head">IDENTITY + AUTHORIZATION</text><line x1="80" y1="262" x2="330" y2="262" class="line"/>
+  <text x="80" y="288" class="field">id <tspan class="note">UUID PK</tspan></text><text x="80" y="314" class="field">name <tspan class="note">varchar(100)</tspan></text><text x="80" y="340" class="field">email <tspan class="note">unique</tspan></text><text x="80" y="366" class="field">role <tspan class="note">USER / MODERATOR / ADMIN</tspan></text><text x="80" y="392" class="note">owns reports, drafts, sessions, audit rows</text>
+
+  <!-- Report draft -->
+  <rect x="400" y="145" width="350" height="420" rx="18" fill="#fff7ed" stroke="#fb923c" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="400" y="145" width="350" height="58" rx="18" fill="#ffedd5"/><path d="M400 185h350v18H400z" fill="#ffedd5"/>
+  <text x="425" y="180" class="entity">report_drafts</text><text x="425" y="225" class="head">ANALYSIS WORKSPACE</text><line x1="425" y1="237" x2="725" y2="237" class="line"/>
+  <text x="425" y="263" class="field">id <tspan class="note">UUID PK = final report id</tspan></text><text x="425" y="289" class="field">reporter_id <tspan class="note">FK users</tspan></text><text x="425" y="315" class="field">category, description</text><text x="425" y="341" class="field">severity_claim, location fields</text><text x="425" y="367" class="field">image_path <tspan class="note">opaque storage key</tspan></text><text x="425" y="393" class="field">image_mime, image_size</text><text x="425" y="419" class="field">image_sha256 <tspan class="note">processed bytes</tspan></text><text x="425" y="445" class="field">expires_at</text><text x="425" y="497" class="note">Created before human finalSeverity</text><text x="425" y="519" class="note">Deleted after submit transaction</text>
+
+  <!-- AI -->
+  <rect x="800" y="145" width="350" height="420" rx="18" fill="#ecfdf5" stroke="#34d399" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="800" y="145" width="350" height="58" rx="18" fill="#d1fae5"/><path d="M800 185h350v18H800z" fill="#d1fae5"/>
+  <text x="825" y="180" class="entity">ai_analyses</text><text x="825" y="225" class="head">ONE ATTEMPT · XOR OWNER</text><line x1="825" y1="237" x2="1125" y2="237" class="line"/>
+  <text x="825" y="263" class="field">id <tspan class="note">UUID PK</tspan></text><text x="825" y="289" class="field">draft_id <tspan class="note">unique FK, or NULL</tspan></text><text x="825" y="315" class="field">report_id <tspan class="note">unique FK, or NULL</tspan></text><text x="825" y="341" class="field">status <tspan class="note">PROCESSING / SUCCEEDED / ...</tspan></text><text x="825" y="367" class="field">flood_detected, suggested_severity</text><text x="825" y="393" class="field">confidence_score, validation_score</text><text x="825" y="419" class="field">weather_* fields</text><text x="825" y="445" class="field">water / passability / quality</text><text x="825" y="471" class="field">summary, evidence_flags, review flag</text><text x="825" y="497" class="field">model metadata + error_code</text><text x="825" y="535" class="note">DB constraint: exactly one owner</text>
+
+  <!-- Flood reports -->
+  <rect x="1180" y="145" width="365" height="420" rx="18" fill="#eff6ff" stroke="#2563eb" stroke-width="3" filter="url(#shadow)"/>
+  <rect x="1180" y="145" width="365" height="58" rx="18" fill="#dbeafe"/><path d="M1180 185h365v18h-365z" fill="#dbeafe"/>
+  <text x="1205" y="180" class="entity">flood_reports</text><text x="1205" y="225" class="head">DURABLE MAP AGGREGATE</text><line x1="1205" y1="237" x2="1518" y2="237" class="line"/>
+  <text x="1205" y="263" class="field">id <tspan class="note">UUID PK</tspan></text><text x="1205" y="289" class="field">reporter_id <tspan class="note">FK users</tspan></text><text x="1205" y="315" class="field">description, category</text><text x="1205" y="341" class="field">severity_claim + final_severity</text><text x="1205" y="367" class="field">ai_used, verification_status</text><text x="1205" y="393" class="field">latitude, longitude, location_source</text><text x="1205" y="419" class="field">image_path + image metadata</text><text x="1205" y="445" class="field">location <tspan class="note">geography(Point,4326)</tspan></text><text x="1205" y="497" class="note">Same row is read by /reports/map</text><text x="1205" y="519" class="note">REJECTED rows excluded from map query</text>
+
+  <!-- Session -->
+  <rect x="55" y="650" width="300" height="210" rx="18" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="55" y="650" width="300" height="54" rx="18" fill="#e2e8f0"/><path d="M55 686h300v18H55z" fill="#e2e8f0"/>
+  <text x="80" y="683" class="entity">refresh_sessions</text><text x="80" y="731" class="field">id, user_id, family_id</text><text x="80" y="757" class="field">token_hash <tspan class="note">unique; raw token absent</tspan></text><text x="80" y="783" class="field">expires_at, revoked_at</text><text x="80" y="809" class="field">replaced_by_id</text><text x="80" y="839" class="note">refresh rotation state</text>
+
+  <!-- Incidents -->
+  <rect x="400" y="650" width="350" height="210" rx="18" fill="#fff7ed" stroke="#fb923c" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="400" y="650" width="350" height="54" rx="18" fill="#ffedd5"/><path d="M400 686h350v18H400z" fill="#ffedd5"/>
+  <text x="425" y="683" class="entity">incidents</text><text x="425" y="731" class="field">id, category, severity, status</text><text x="425" y="757" class="field">confidence_score</text><text x="425" y="783" class="field">latitude, longitude, location</text><text x="425" y="809" class="field">first/last_reported_at</text><text x="425" y="839" class="note">optional grouping; not created by this flow</text>
+
+  <!-- Audit -->
+  <rect x="800" y="650" width="350" height="210" rx="18" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="800" y="650" width="350" height="54" rx="18" fill="#e2e8f0"/><path d="M800 686h350v18H800z" fill="#e2e8f0"/>
+  <text x="825" y="683" class="entity">audit_logs</text><text x="825" y="731" class="field">id, actor_id <tspan class="note">FK users</tspan></text><text x="825" y="757" class="field">action, entity_type, entity_id</text><text x="825" y="783" class="field">metadata JSONB</text><text x="825" y="809" class="field">ip_address, created_at</text><text x="825" y="839" class="note">report create/update/moderation trail</text>
+
+  <!-- Storage / map note -->
+  <rect x="1180" y="650" width="365" height="210" rx="18" fill="#fef3c7" stroke="#d97706" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1205" y="690" class="entity">outside the schema</text><text x="1205" y="731" class="field">uploads_data volume</text><text x="1205" y="757" class="field">image bytes</text><text x="1205" y="793" class="field">DB stores image_path only</text><text x="1205" y="829" class="note">No Media table / no media_id</text>
+
+  <!-- relations -->
+  <path d="M355 300 H400" fill="none" stroke="#334155" stroke-width="2.5"/><text x="378" y="286" text-anchor="middle" class="rel">1 → many</text>
+  <path d="M750 330 H800" fill="none" stroke="#334155" stroke-width="2.5"/><text x="775" y="316" text-anchor="middle" class="rel">draft owner</text>
+  <path d="M1150 330 H1180" fill="none" stroke="#334155" stroke-width="2.5"/><text x="1165" y="316" text-anchor="middle" class="rel">after submit</text>
+  <path d="M355 755 C380 755 380 420 400 420" fill="none" stroke="#64748b" stroke-width="2"/><text x="368" y="594" class="rel">reporter</text>
+  <path d="M355 770 C520 950 1090 950 1200 565" fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="7 6"/><text x="680" y="964" class="rel">user owns final report</text>
+  <path d="M750 755 H800" fill="none" stroke="#334155" stroke-width="2.5"/><text x="775" y="741" text-anchor="middle" class="rel">groups</text>
+  <path d="M1150 755 H1180" fill="none" stroke="#334155" stroke-width="2.5"/><text x="1165" y="741" text-anchor="middle" class="rel">image key</text>
+
+  <rect x="55" y="930" width="1490" height="86" rx="16" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="80" y="962" class="field"><tspan font-weight="700">Lifecycle:</tspan> report_drafts.id = D → ai_analyses.draft_id = D → submit transaction → flood_reports.id = D and ai_analyses.report_id = D</text>
+  <text x="80" y="989" class="note">Map reads the durable flood_reports row; the frontend receives ReportMapDto, not raw image_path, reporter identity, or database records.</text>
+</svg>

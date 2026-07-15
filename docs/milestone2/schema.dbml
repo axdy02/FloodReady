@@ -1,0 +1,212 @@
+// FloodReady Milestone 2 presentation schema.
+// Authority: backend/prisma/schema.prisma and backend/prisma/migrations/*.
+// Storage bytes are outside PostgreSQL in the private uploads_data volume.
+
+Enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+Enum ReportCategory {
+  ROAD_WATERLOGGING
+  FLOODED_ROAD
+  CLOGGED_DRAIN
+  OVERFLOWING_DRAIN
+  OPEN_MANHOLE
+  FALLEN_TREE
+  STRANDED_VEHICLE
+  UNDERPASS_FLOODING
+  OTHER
+}
+Enum Severity {
+  UNKNOWN
+  MINOR
+  MODERATE
+  SEVERE
+  IMPASSABLE
+}
+Enum VerificationStatus {
+  SUBMITTED
+  PENDING_REVIEW
+  PROVISIONAL
+  VERIFIED
+  DISPUTED
+  REJECTED
+  RESOLVED
+  STALE
+}
+Enum IncidentStatus {
+  ACTIVE
+  MONITORING
+  RESOLVED
+  STALE
+}
+Enum LocationSource {
+  DEVICE_GPS
+  MANUAL
+}
+Enum AiAnalysisStatus {
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  TIMED_OUT
+}
+Enum WaterLevelCategory {
+  NONE
+  ANKLE_LEVEL
+  KNEE_LEVEL
+  WAIST_LEVEL
+  ABOVE_WAIST
+  UNKNOWN
+}
+Enum RoadPassability {
+  PASSABLE
+  CAUTION
+  UNSAFE
+  IMPASSABLE
+  UNKNOWN
+}
+Enum ImageQuality {
+  GOOD
+  FAIR
+  POOR
+  UNUSABLE
+}
+
+Table users {
+  id uuid [pk]
+  name varchar(100) [not null]
+  email varchar(254) [not null, unique]
+  password_hash varchar(255) [not null]
+  role Role [not null, default: 'USER']
+  is_active boolean [not null, default: true]
+  failed_login_attempts integer [not null, default: 0]
+  failed_login_window_started_at timestamptz
+  locked_until timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table refresh_sessions {
+  id uuid [pk]
+  user_id uuid [not null]
+  token_hash char(64) [not null, unique]
+  family_id uuid [not null]
+  expires_at timestamptz [not null]
+  revoked_at timestamptz
+  replaced_by_id uuid [unique]
+  created_at timestamptz [not null]
+  ip_address inet [not null]
+  user_agent varchar(512)
+}
+
+Table report_drafts {
+  id uuid [pk, note: 'Draft UUID becomes flood_reports.id on submit']
+  reporter_id uuid [not null]
+  category ReportCategory [not null]
+  description varchar(1000) [not null]
+  severity_claim Severity [not null, default: 'UNKNOWN']
+  latitude decimal(9,6) [not null]
+  longitude decimal(9,6) [not null]
+  gps_accuracy decimal(10,2)
+  location_source LocationSource [not null, default: 'DEVICE_GPS']
+  captured_at timestamptz [not null]
+  image_path varchar(255) [not null, note: 'Opaque key into uploads_data']
+  image_mime varchar(32) [not null]
+  image_size integer [not null]
+  image_sha256 char(64) [not null]
+  expires_at timestamptz [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table ai_analyses {
+  id uuid [pk]
+  draft_id uuid [unique, note: 'Exactly one of draft_id/report_id is set']
+  report_id uuid [unique, note: 'Exactly one of draft_id/report_id is set']
+  status AiAnalysisStatus [not null]
+  flood_detected boolean
+  suggested_severity Severity
+  confidence_score decimal(5,4)
+  validation_score decimal(5,4)
+  validation_outcome varchar(32)
+  weather_summary varchar(500)
+  weather_precipitation_mm decimal(8,2)
+  weather_temperature_c decimal(5,2)
+  weather_score decimal(5,4)
+  water_level_category WaterLevelCategory
+  road_passability RoadPassability
+  image_quality ImageQuality
+  summary varchar(500)
+  evidence_flags jsonb [not null, default: '[]']
+  needs_human_review boolean
+  model_name varchar(100)
+  model_version varchar(100)
+  processing_time_ms integer
+  error_code varchar(64)
+  started_at timestamptz [not null]
+  completed_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table flood_reports {
+  id uuid [pk]
+  reporter_id uuid [not null]
+  category ReportCategory [not null]
+  description varchar(1000) [not null]
+  severity_claim Severity [not null, default: 'UNKNOWN']
+  final_severity Severity [not null, default: 'UNKNOWN']
+  ai_used boolean [not null, default: false]
+  latitude decimal(9,6) [not null]
+  longitude decimal(9,6) [not null]
+  gps_accuracy decimal(10,2)
+  location_source LocationSource [not null, default: 'DEVICE_GPS']
+  captured_at timestamptz [not null]
+  submitted_at timestamptz [not null]
+  image_path varchar(255) [not null, note: 'Opaque key into uploads_data']
+  image_mime varchar(32)
+  image_size integer
+  image_sha256 char(64)
+  upload_source varchar(16) [not null, default: 'WEB']
+  verification_status VerificationStatus [not null, default: 'SUBMITTED']
+  incident_id uuid
+  location geography [not null, note: 'Generated Point(longitude, latitude), SRID 4326; GiST indexed']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table incidents {
+  id uuid [pk]
+  category ReportCategory [not null]
+  severity Severity [not null, default: 'UNKNOWN']
+  confidence_score decimal(5,4)
+  status IncidentStatus [not null, default: 'ACTIVE']
+  latitude decimal(9,6) [not null]
+  longitude decimal(9,6) [not null]
+  first_reported_at timestamptz [not null]
+  last_reported_at timestamptz [not null]
+  location geography [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table audit_logs {
+  id uuid [pk]
+  actor_id uuid [not null]
+  action varchar(64) [not null]
+  entity_type varchar(32) [not null]
+  entity_id uuid [not null, note: 'Logical entity reference']
+  metadata jsonb [not null, default: '{}']
+  ip_address inet [not null]
+  created_at timestamptz [not null]
+}
+
+Ref: users.id < refresh_sessions.user_id [delete: restrict]
+Ref: refresh_sessions.id < refresh_sessions.replaced_by_id [delete: set null]
+Ref: users.id < report_drafts.reporter_id [delete: restrict]
+Ref: report_drafts.id < ai_analyses.draft_id [delete: cascade]
+Ref: users.id < flood_reports.reporter_id [delete: restrict]
+Ref: flood_reports.id < ai_analyses.report_id [delete: cascade]
+Ref: incidents.id < flood_reports.incident_id [delete: set null]
+Ref: users.id < audit_logs.actor_id [delete: restrict]
