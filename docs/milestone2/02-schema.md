@@ -1,21 +1,21 @@
 # Milestone 2 database schema
 
-The authoritative schema is `backend/prisma/schema.prisma` plus every migration under `backend/prisma/migrations/`. The application uses one PostgreSQL 18/PostGIS 3.6 database and the PostgreSQL `public` schema. Backend 1 is the only service with application database access.
+The source of truth is `backend/prisma/schema.prisma` plus every migration under `backend/prisma/migrations/`. The repository uses one PostgreSQL/PostGIS database. Backend 1 is the only service with database access; the frontend and Backend 2 never connect to PostgreSQL directly.
 
 ## Presentation diagram
 
 ![Milestone 2 database schema](schema-presentation.svg)
 
-The editable Mermaid source is [schema-presentation.mmd](schema-presentation.mmd). The DBML source is [schema.dbml](schema.dbml).
+Editable sources: [schema-presentation.mmd](schema-presentation.mmd) and [schema.dbml](schema.dbml).
 
 ```mermaid
 erDiagram
   USERS ||--o{ REFRESH_SESSIONS : owns
   REFRESH_SESSIONS o|--|| REFRESH_SESSIONS : replaces
-  USERS ||--o{ REPORT_DRAFTS : creates
-  REPORT_DRAFTS ||--o| AI_ANALYSES : has_during_review
+  USERS ||--o{ REPORT_DRAFTS : creates_alternate_path
+  REPORT_DRAFTS ||--o| AI_ANALYSES : owns_optional_draft_analysis
   USERS ||--o{ FLOOD_REPORTS : submits
-  FLOOD_REPORTS ||--o| AI_ANALYSES : owns_after_submit
+  FLOOD_REPORTS ||--o| AI_ANALYSES : owns_background_analysis
   INCIDENTS o|--o{ FLOOD_REPORTS : groups
   USERS ||--o{ AUDIT_LOGS : acts
 
@@ -74,54 +74,76 @@ erDiagram
   }
 ```
 
-## Entities used by the report-to-map flow
+## Entities used by the current report-to-map flow
 
-| Table | Role in Milestone 2 | Important fields |
+| Table | Role | Important fields |
 |---|---|---|
 | `users` | Authenticated ownership and authorization | `id`, `role`, `is_active` |
-| `report_drafts` | Temporary, owner-scoped record created before human review | `id`, `reporter_id`, report metadata, `image_path`, `image_mime`, `image_size`, `image_sha256`, `expires_at` |
-| `ai_analyses` | One analysis attempt, first attached to a draft then transferred to the final report | `id`, `draft_id` or `report_id` (exactly one), `status`, image findings, weather fields, model metadata, error code |
-| `flood_reports` | Durable final report read by the map | `id`, `reporter_id`, description, `severity_claim`, `final_severity`, `ai_used`, coordinates, `image_path`, `verification_status`, generated `location` |
-| `audit_logs` | Audit trail for report creation, update, and moderation | `actor_id`, `action`, `entity_type`, `entity_id`, `metadata` |
-| `incidents` | Existing optional grouping entity | `incident_id` on a report is nullable; the current report submission flow does not create or link incidents |
+| `flood_reports` | Durable report created by the main frontend and read by the map | `id`, `reporter_id`, `description`, `severity_claim`, `final_severity`, `ai_used`, coordinates, `image_path`, `verification_status`, PostGIS `location` |
+| `ai_analyses` | One AI attempt linked to the report; starts `PROCESSING` and is updated in the background | `id`, `report_id`, `status`, model result, weather fields, validation fields, `error_code` |
+| `audit_logs` | Audit trail for report creation, updates, and moderation | `actor_id`, `action`, `entity_type`, `entity_id`, `metadata` |
 | `refresh_sessions` | Auth refresh-token rotation state | User/session relations; raw refresh tokens are not stored |
+| `incidents` | Existing optional grouping entity | Nullable `incident_id`; the current submission path does not create or link incidents |
+| `report_drafts` | Alternate older `/reports/analyze` flow used by the comparison `wireframe/` app | Temporary report/image metadata with `expires_at`; not used by the main `frontend/` direct-submit path |
 
-## The key state transition
+## Current primary persistence sequence
+
+```text
+POST /api/v1/reports
+  -> save processed image privately
+  -> transaction creates flood_reports (finalSeverity = severityClaim)
+  -> same transaction creates ai_analyses (status = PROCESSING, report_id = report.id)
+  -> return 201 immediately
+  -> queueMicrotask calls Backend 2
+
+AI success
+  -> ai_analyses = SUCCEEDED with structured result
+  -> flood_reports.ai_used = true
+  -> flood_reports.final_severity = suggestedSeverity
+  -> flood_reports.verification_status = PROVISIONAL
+
+AI failure or timeout
+  -> ai_analyses = FAILED or TIMED_OUT with error_code
+  -> report remains persisted with its claimed final severity and PENDING_REVIEW status
+```
+
+The report is therefore durable before AI completes. The main frontend does not show a pre-submit human override step. It displays the persisted report immediately, polls while analysis is processing, and exposes owner-triggered `POST /reports/:id/retry-ai` when an attempt fails.
+
+The older path remains real but secondary:
 
 ```text
 POST /reports/analyze
-  report_drafts.id = D
-  ai_analyses.id = A, draft_id = D, report_id = NULL
+  -> report_drafts.id = D
+  -> ai_analyses.id = A, draft_id = D
 
 POST /reports/D/submit { finalSeverity }
-  flood_reports.id = D
-  ai_analyses.id = A, draft_id = NULL, report_id = D
-  report_drafts.id = D is deleted
+  -> creates flood_reports and transfers A from draft_id to report_id
+  -> deletes report_drafts row
 ```
 
-The schema constraint `ai_analyses_owner_check` enforces that an analysis belongs to exactly one draft or one final report. The final severity is stored separately from the original `severity_claim`; AI output remains advisory and does not overwrite either field automatically.
+The `ai_analyses_owner_check` constraint enforces that each analysis belongs to exactly one draft or one final report. There is no separate `Media` table or `media_id`.
 
 ## Image metadata truth
 
-There is no separate media table and no `media_id`. The image reference is the opaque `image_path` key, while `image_mime`, `image_size`, and `image_sha256` document the processed bytes. The bytes themselves remain in the private local storage volume. During analysis, the identifier chain is:
+The database stores the opaque `image_path`, processed MIME, byte size, and SHA-256. The image bytes remain in the private local storage volume. For the primary flow the identifier chain is:
 
 ```text
 X-Request-Id
-  -> report_drafts.id (also sent as Backend 2 reportId)
-  -> ai_analyses.id
-  -> report_drafts.image_path
+  -> flood_reports.id
+  -> ai_analyses.report_id
+  -> flood_reports.image_path
   -> uploads_data/reports/YYYY/MM/<uuid>.<ext>
 ```
 
-After submit, the same UUID becomes `flood_reports.id`, and the same `image_path` is retained. This is how the implementation isolates one selected image without pretending that a non-existent `Media` entity exists.
+Backend 1 sends the processed bytes to Backend 2 for the current analysis request. Backend 2 does not write them to permanent storage and has no database access. The authenticated image route reads the private bytes only for an authorized report owner/moderator.
 
 ## Map projection
 
-`GET /api/v1/reports/map` reads the generated PostGIS geography point from `flood_reports.location` and returns a privacy-safe `ReportMapDto`. It includes the persisted report ID, category, claimed/final severity, AI summary fields, coordinates, timestamps, verification status, incident ID, and `canViewDetails`. It does not return `description`, `reporter_id`, `image_path`, image bytes, email, or authentication data in the map projection. MapLibre converts the response to GeoJSON `[longitude, latitude]` points.
+`GET /api/v1/reports/map` reads the generated PostGIS geography point from `flood_reports.location` and returns a privacy-safe projection. It includes the report ID, category, claimed/final severity, AI status/result summary, coordinates, timestamps, verification status, incident ID, and `canViewDetails`. It does not return `description`, `reporter_id`, `image_path`, image bytes, email, or authentication data. MapLibre converts the response to GeoJSON `[longitude, latitude]` points.
 
 ## Schema caveats
 
-- `report_drafts.expires_at` is recorded, but no scheduled cleanup worker was found in the repository.
-- `ai_analyses.evidence_flags` is JSONB with array-type enforcement; values are validated in Backend 2 and again in Backend 1's response schema.
-- `validation_score`, `validation_outcome`, and weather columns are added by `20260715000000_weather_validated_ai_scores`.
-- `incidents` and its relation are real schema objects, but incident creation is outside this Milestone 2 report submission path.
+- `report_drafts.expires_at` exists for the alternate flow, but no scheduled cleanup worker was found.
+- `ai_analyses.evidence_flags` is JSONB with array-type enforcement; result data is validated in Backend 2 and Backend 1.
+- Weather and validation columns are added by `20260715000000_weather_validated_ai_scores`.
+- `incidents` and its relation are real schema objects, but incident creation is outside this Milestone 2 submission path.

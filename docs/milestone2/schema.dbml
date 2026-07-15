@@ -101,7 +101,7 @@ Table refresh_sessions {
 }
 
 Table report_drafts {
-  id uuid [pk, note: 'Draft UUID becomes flood_reports.id on submit']
+  id uuid [pk, note: 'Alternate wireframe /reports/analyze path; becomes flood_reports.id on submit']
   reporter_id uuid [not null]
   category ReportCategory [not null]
   description varchar(1000) [not null]
@@ -151,7 +151,7 @@ Table ai_analyses {
 }
 
 Table flood_reports {
-  id uuid [pk]
+  id uuid [pk, note: 'Primary report row created immediately by POST /reports']
   reporter_id uuid [not null]
   category ReportCategory [not null]
   description varchar(1000) [not null]
@@ -169,7 +169,7 @@ Table flood_reports {
   image_size integer
   image_sha256 char(64)
   upload_source varchar(16) [not null, default: 'WEB']
-  verification_status VerificationStatus [not null, default: 'SUBMITTED']
+  verification_status VerificationStatus [not null, default: 'SUBMITTED', note: 'Primary create overrides to PENDING_REVIEW; AI success sets PROVISIONAL']
   incident_id uuid
   location geography [not null, note: 'Generated Point(longitude, latitude), SRID 4326; GiST indexed']
   created_at timestamptz [not null]

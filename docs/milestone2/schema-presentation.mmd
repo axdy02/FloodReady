@@ -1,10 +1,10 @@
 erDiagram
   USERS ||--o{ REFRESH_SESSIONS : owns
   REFRESH_SESSIONS o|--|| REFRESH_SESSIONS : replaces
-  USERS ||--o{ REPORT_DRAFTS : creates
-  REPORT_DRAFTS ||--o| AI_ANALYSES : has_during_review
+  USERS ||--o{ REPORT_DRAFTS : creates_alternate_path
+  REPORT_DRAFTS ||--o| AI_ANALYSES : owns_optional_draft_analysis
   USERS ||--o{ FLOOD_REPORTS : submits
-  FLOOD_REPORTS ||--o| AI_ANALYSES : owns_after_submit
+  FLOOD_REPORTS ||--o| AI_ANALYSES : owns_background_analysis
   INCIDENTS o|--o{ FLOOD_REPORTS : groups
   USERS ||--o{ AUDIT_LOGS : acts
 

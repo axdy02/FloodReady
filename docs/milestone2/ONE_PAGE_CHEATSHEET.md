@@ -1,120 +1,48 @@
-# FloodReady Milestone 2 — one-page presenter cheat sheet
+# FloodReady Milestone 2 - one-page presenter cheat sheet
 
 ## One-sentence result
 
-> A signed-in user submits one real geotagged report, reviews that persisted report with its protected evidence photo, and sees the same row displayed by MapLibre through `GET /api/v1/reports/map`.
-
-## Scope
-
-**Implemented:** exactly two core features: (1) the reporting workflow, with Submit Flood Report and owner-only My Reports evidence history; (2) Reports Map, including marker detail and persistence proof.
-
-**Presented routes:** `/reports/new`, `/reports`, and `/map` only. The first two are views within the reporting workflow, not a third core feature. Authenticate before the audience sees the browser.
-
-**Not claimed:** AI triage, automatic incident creation, route planning, sensors, analytics, authority dashboard, official verification. **FastAPI is health-only; AI triage is DISABLED.**
+> A signed-in user submits a geotagged flood report with one private evidence image; Backend 1 persists it immediately, Backend 2 enriches it with advisory AI analysis, and the same persisted row appears as a MapLibre marker.
 
 ## Architecture in 20 seconds
 
 ```text
-Browser
-  ├─ Next.js functional wireframe + MapLibre
-  │    ├─ HTTPS tile requests → configured map provider
-  │    └─ /api/v1 requests → Express API
-  └─ no direct database access
-
-Express API (sole data owner)
-  ├─ Prisma → one PostgreSQL 18/PostGIS 3.6 database
-  └─ processed image → persistent uploads volume
-
-FastAPI
-  └─ /health and /health/ready only; no P0 call, model, provider, or DB
+frontend/ :3000
+  -> POST /api/v1/reports (multipart)
+  -> Backend 1: validate, store image, write report + PROCESSING analysis
+  -> 201 immediately; queueMicrotask -> Backend 2
+  -> Backend 2: Pillow + Open-Meteo + Gemini structured JSON
+  -> Backend 1: persist result; GET /reports/map -> MapLibre
 ```
 
-No gateway, broker, shared DAL, duplicate report database, or frontend-to-DB access.
+Backend 1 is the sole database owner. Backend 2 has no database access and no permanent image storage. `wireframe/ :3002` is only the alternate draft/review comparison app.
 
 ## Schema in 20 seconds
 
-- `User 1 → many FloodReport`; Express owns both.
-- Core report: `id`, `reporter_id`, `category`, required `description`, `severity_claim`, `latitude`, `longitude`, `location_source`, timestamps, `verification_status`, evidence key, generated PostGIS point.
-- Optional `incident_id` exists, but new reports are not automatically aggregated.
-- GeoJSON/PostGIS order is **longitude, latitude**. API fields are named separately.
-- New status is `SUBMITTED` = community evidence, **unverified**.
-- Source of truth: `backend/prisma/schema.prisma` plus `backend/prisma/migrations/`.
+- `flood_reports` is the primary report row created by `POST /reports`.
+- `ai_analyses.report_id` stores the background attempt and result.
+- `report_drafts` is retained for the older `/reports/analyze` path used by `wireframe/`.
+- The database stores `image_path` and metadata; bytes are in the private `uploads_data` volume.
+- PostGIS stores the generated point; map output uses `[longitude, latitude]`.
 
-## Live-demo clicks
+## Demo clicks
 
-1. Start on `/map`; state that data comes from the Report API.
-2. Click **Submit Flood Report**.
-3. Choose category + **reported** severity.
-4. Enter a unique 10–1,000-character description.
-5. Choose one valid non-sensitive image.
-6. Click map; point to temporary pin and coordinates.
-7. Click **Submit Flood Report** once.
-8. Point to returned UUID, `SUBMITTED`, latitude and longitude.
-9. Click **View submitted reports**; point to the new record and protected photo.
-10. Click that card's **Show on map** link.
-11. Point to persisted count and selected marker.
-12. Open marker detail: severity, status, coordinates, time, stored description.
-13. Refresh and say: “This is a new backend read of the same database row.”
+1. Register/sign in at `http://localhost:3000/register`.
+2. Submit a category, claimed severity, description, location, and one image.
+3. Show the immediate saved confirmation and pending map marker.
+4. Open My Reports, wait for polling/background AI completion, and show the stored AI fields.
+5. Open the protected evidence image.
+6. Reload Reports Map and show the marker still comes from persisted Backend 1 data.
 
 ## Endpoint facts
 
-- Create: `POST /api/v1/reports` — authenticated multipart, returns `201 ReportDto`.
-- Owner history: `GET /api/v1/users/me/reports` — authenticated and scoped to the signed-in reporter.
-- Evidence photo: `GET /api/v1/reports/:reportId/image` — owner/moderator authorized, `private, no-store`, no storage key exposed.
-- Markers: `GET /api/v1/reports/map?west&south&east&north` — authenticated, bounded, excludes rejected.
-- Detail: `GET /api/v1/reports/:reportId` — owner/moderator protected detail.
-- Backend ready: `GET http://127.0.0.1:3001/api/v1/health/ready` checks DB + uploads.
-- AI ready: `GET http://127.0.0.1:8000/health/ready` checks only the health-only service.
+- Create: `POST /api/v1/reports` - authenticated multipart, returns `201`.
+- Own reports: `GET /api/v1/users/me/reports` - authenticated and reporter-scoped.
+- Retry: `POST /api/v1/reports/:reportId/retry-ai` - owner-triggered after failure.
+- Evidence: `GET /api/v1/reports/:reportId/image` - protected private bytes.
+- Markers: `GET /api/v1/reports/map` - bounded privacy-safe projection.
+- AI: `POST /internal/v1/flood-analyses` - Backend 1 to Backend 2 only.
 
-## Exact transition lines
+## If asked about failure or verification
 
-1. “I will begin with the corrected architecture, because every later screen follows this same request path.”
-2. “Now that component ownership is clear, I will show the small schema that supports this flow.”
-3. “The schema is deliberately narrow; next I will create one real row through the wireframe.”
-4. “The API has returned the stored record; I will verify it in the owner's evidence history, then follow that exact ID and location to the map.”
-5. “The live UI proves the behavior; now I will show the automated evidence behind the same path.”
-6. “I will close with the exact project boundary and the work I am deliberately not claiming.”
-
-## Start and prove
-
-```powershell
-docker compose --env-file .env up --detach --wait --wait-timeout 180 db
-docker compose --env-file .env run --rm --no-deps migrate
-docker compose --env-file .env up --detach --no-deps --wait --wait-timeout 180 backend ai-service frontend
-docker compose --env-file .env ps
-```
-
-Canonical tested preflight:
-
-```powershell
-node --env-file=.env scripts/milestone2-preflight.mjs --write-flow
-```
-
-No manual environment or credential loading is required. If both optional demo credentials are absent, the script registers an isolated preflight user. The live run passed all health checks and the required line: `PASS persisted report -> map marker: <uuid>`.
-
-## If something fails
-
-- Inspect: `docker compose --env-file .env logs --tail 100 db backend frontend ai-service`
-- DB/API: rerun migration, then restart backend.
-- Marker: use success link, wait, click Refresh, confirm correct area.
-- Session: sign in again; never present anonymous state as working auth.
-- Tiles: state external provider failure and show preflight/test evidence, clearly labeled.
-- AI: continue P0 without it and say, “FastAPI is health-only; AI triage is disabled and the report flow does not call it.”
-- Preserve data: `docker compose --env-file .env down --remove-orphans` is safe.
-- **Never run `down --volumes` during rehearsal or presentation.** It destroys users, reports, audits and uploads.
-
-## Fast answers
-
-- **Who owns tables?** Express only; AI owns none.
-- **Why one DB?** One clear owner and no synchronization problem for this scope.
-- **Why image required?** Current backend schema and upload pipeline genuinely require one; the UI matches it.
-- **How is the photo protected?** The gallery uses a Bearer-authenticated image endpoint; it never receives a public path or storage key.
-- **Hard-coded reports?** No. `/reports/map` supplies markers; URL params only center/select.
-- **Why description separate?** Map DTO is privacy-limited; owner detail is a second protected request.
-- **What proves persistence?** Prisma row + repeated map read in `milestone2-report-map.test.ts`, plus write-flow preflight.
-- **Is severity verified?** No; it is the reporter’s claim.
-- **Is AI working?** No triage. Health service only, explicitly disabled.
-
-## Final close
-
-> The demonstrated result is deliberately small: exactly two core features, one clear data owner, one persisted report with protected owner evidence history, and one map read of the same row.
+AI failure does not delete the saved report; it records `FAILED`/`TIMED_OUT` and allows retry. AI output is advisory triage, not official verification. There is no durable AI queue, object storage, signed URL, automatic retry/backoff, or scheduled image cleanup in the current implementation.

@@ -1,7 +1,9 @@
 # Presentation script
 
-“FloodReady Milestone 2 has only two features. First, a citizen submits a flood report with a photo and location. Second, after the report is persisted, it appears on the map.
+“FloodReady Milestone 2 has a reporting workflow and a persisted reports map. A signed-in user chooses a location, enters the incident details, and uploads one evidence image in the main `frontend/` app.
 
-The browser sends the form to Backend 1. Backend 1 is the owner of authentication, image validation, storage, database writes, and all map data. It stores a temporary draft before asking Backend 2 for advisory image analysis. Backend 2 has no database access; it validates the image and calls Gemini 3.1 Flash-Lite for strict structured JSON. The user still selects the final severity, so AI never verifies or overrides a citizen report.
+The browser sends one authenticated multipart request to Backend 1. Backend 1 validates and re-encodes the image, stores the processed bytes in the private uploads volume, and creates the final `flood_reports` row plus an `ai_analyses` row in `PROCESSING`. It returns the saved report immediately, so the report can already appear on the map.
 
-When I submit, the draft becomes a persisted `flood_reports` row, the analysis is linked to it, and the photo remains private. My Reports retrieves the row and protected photo through authorization. Reports Map retrieves the same persisted record by coordinates. I can reload the page to prove it is data, not frontend state.”
+Backend 1 then uses an in-process background task to send the processed image and report context to Backend 2. Backend 2 preprocesses the image, gets supporting weather context from Open-Meteo, and calls Gemini for structured triage. Backend 1 validates and stores the result. A success updates the persisted AI severity and marks the report provisional; a failure remains visible and can be retried by the owner.
+
+My Reports and Reports Map read the persisted rows from Backend 1. MapLibre renders the report coordinates as a marker, and the image remains private behind an authenticated image endpoint. The separate `wireframe/` app demonstrates an older draft/review contract, but it is not the primary flow.”

@@ -1,90 +1,71 @@
-# Milestone 2 architecture
+# Milestone 2 architecture — current implementation
 
-Verified against the current working tree on 2026-07-15. The implementation authority is the source code, environment files, Compose definition, Prisma schema, and migrations—not the older Milestone 1 prose.
+Verified against the repository state on 2026-07-15. The canonical user-facing application is `frontend/` on port 3000. `wireframe/` is a second comparison/testing frontend on port 3002 and retains the older draft-review flow.
 
-## Working-tree note
+## Current report flow
 
-The current checkout contains the Next.js application under `wireframe/`, while `docker-compose.yml`, package documentation, and several older evidence files still refer to `frontend/`. The diagram labels the application as **Next.js frontend (`wireframe/` in this checkout)** and records the Compose path mismatch rather than silently treating the old path as present.
+![Current Milestone 2 architecture](architecture-presentation.svg)
 
-## Presentation diagram
-
-![Milestone 2 architecture](architecture-presentation.svg)
-
-The editable Mermaid source is [architecture-presentation.mmd](architecture-presentation.mmd).
+Editable source: [architecture-presentation.mmd](architecture-presentation.mmd).
 
 ```mermaid
 flowchart LR
-  U["Authenticated user / browser"]
-  F["Next.js frontend\nworking tree: wireframe/"]
-  B1["Backend 1\nNode.js + Express\n/api/v1"]
-  M["Multer memory\ncurrent request only"]
-  P["Sharp + file-type\nvalidate, rotate, re-encode"]
-  S[("Private local image storage\nUPLOAD_DIRECTORY / uploads_data")]
-  DB[("PostgreSQL 18 + PostGIS 3.6\npublic schema")]
-  B2["Backend 2\nFastAPI\n/internal/v1/flood-analyses"]
-  W["Open-Meteo\nweather context"]
-  AI["Gemini 3.1 Flash-Lite\nconfigured provider/model"]
-  MAP["MapLibre GL JS\nGeoJSON markers"]
-  T["OpenFreeMap / OpenStreetMap\nconfigured basemap resources"]
+  U["Authenticated user"] --> F["Main frontend\nfrontend/ :3000"]
+  F -->|POST /api/v1/reports\nBearer + multipart| B1["Backend 1\nNode / Express"]
+  B1 -->|Multer memory| V["file-type + Sharp\nvalidate and re-encode"]
+  V --> S[("Local private image storage\nuploads_data volume")]
+  B1 -->|one transaction| DB[("PostgreSQL + PostGIS")]
+  B1 -->|201 immediately| F
+  B1 -. "queueMicrotask; not durable queue" .-> B2["Backend 2\nFastAPI"]
+  B2 -->|weather lookup| W["Open-Meteo"]
+  B2 -->|prepared image + text + weather| AI["Gemini 3.1 Flash-Lite"]
+  B2 -. "structured response" .-> B1
+  B1 -->|background update\nai_analyses + flood_reports| DB
+  F -->|GET /reports/map\nmanual refresh| B1 --> DB
+  B1 -->|ReportMapDto\nincluding AI status| F --> M["MapLibre GL JS\nGeoJSON markers"]
+  F --> T["OpenFreeMap / OSM\nbasemap resources"]
 
-  U -->|File object, form, location| F
-  F -->|Bearer + multipart POST /reports/analyze| B1
-  B1 --> M --> P --> S
-  B1 -->|draft + PROCESSING analysis| DB
-  B1 -->|Bearer service token + X-Request-Id\nmultipart image bytes + metadata| B2
-  B2 -->|coordinates only for weather lookup| W
-  B2 -->|image + description + user severity + weather summary| AI
-  AI --> B2 -->|validated structured envelope| B1
-  B1 -->|update ai_analyses| DB
-  F -->|human finalSeverity| B1
-  B1 -->|submit draft transaction| DB
-  F -->|GET /reports/map| B1 -->|PostGIS bbox read| DB
-  B1 -->|privacy-safe ReportMapDto| F --> MAP
-  MAP --> T
-  F -->|owner/moderator image GET| B1 --> S
-
-  classDef app fill:#dbeafe,stroke:#2563eb,color:#0f172a
-  classDef data fill:#fef3c7,stroke:#d97706,color:#0f172a
-  classDef ext fill:#dcfce7,stroke:#16a34a,color:#0f172a
-  class F,B1,B2,MAP app
-  class S,DB,M,P data
-  class W,AI,T ext
+  WF["wireframe/ :3002\ncomparison frontend"] -. "alternate /reports/analyze\n+ draft submit path" .-> B1
 ```
 
-## Runtime responsibilities
+## Responsibilities and boundaries
 
-| Component | Implemented responsibility | Explicit boundary |
+| Component | Current responsibility | Boundary |
 |---|---|---|
-| Browser + Next.js UI | Holds the selected `File` in React state, creates an object-URL preview, collects description/category/severity/location, calls Backend 1, presents AI output, asks for `finalSeverity`, and renders persisted map markers. | No database, upload-volume, or AI-provider access. The access token is held by the browser auth store; the refresh token remains in the backend-controlled cookie boundary. |
-| Backend 1: Node/Express | Authenticates, rate-limits, parses one multipart file, validates metadata, re-encodes/stores the image, creates drafts and AI rows, calls Backend 2, validates its response with Zod, persists final reports, serves private images, and returns the map projection. | Sole application database owner. The direct `POST /reports` path also exists, but the Milestone 2 UI uses `/reports/analyze` followed by `/:draftId/submit`. |
-| Private image storage | Local filesystem under `UPLOAD_DIRECTORY`; Compose mounts the durable `uploads_data` volume at `/app/uploads`. Keys are opaque `reports/YYYY/MM/<uuid>.<ext>` values. | Not public/static. PostgreSQL stores the key and metadata, not image bytes. |
-| Backend 2: FastAPI | Protects the internal endpoint, validates metadata and image again, decodes/orientation-corrects/resizes/converts the image to JPEG, fetches weather context, invokes the configured provider, validates provider JSON, calculates the combined validation score, and returns a structured response. | No `DATABASE_URL`, report queries, user lookup, or permanent image storage. It receives the selected image bytes for one analysis request only. |
-| Gemini provider | Receives the prepared JPEG plus a short prompt containing report description, user severity, allowed severities, and weather summary. The response is constrained by Gemini JSON response schema and parsed as JSON. | API key is backend 2 only. The model is advisory and does not verify reports or set the final severity. |
-| PostgreSQL/PostGIS | Stores users, sessions, drafts, analyses, reports, incidents, and audit logs; generated geography points support bounded map reads. | Node/Express is the sole application owner; FastAPI does not connect to the database. |
-| MapLibre + basemap | Turns `ReportMapDto` coordinates into GeoJSON `[longitude, latitude]` points and requests the configured style/tile resources. | The basemap provider does not receive FloodReady report records; markers come from Backend 1. |
+| `frontend/` | Main form sends one multipart report, shows the saved report immediately, lists own reports, polls report history while AI is processing, and renders map markers with AI status/assessment. | No database, filesystem, or provider access. It does not wait for AI before saving. |
+| `wireframe/` | Preserved comparison UI. It uses the older `/reports/analyze` → `report_drafts` → `/:draftId/submit` flow and includes human AI-review controls. | Not the canonical port-3000 flow. Do not use its human-override behavior to describe the main frontend. |
+| Backend 1 | Authenticates, rate-limits, validates, processes and stores the image, creates the final report and `ai_analyses(PROCESSING)` row, starts background analysis, persists the provider result, exposes retry, and serves map/private-image reads. | Sole application database owner. The background task is in-process and non-durable. |
+| Private image storage | Stores processed bytes under `reports/YYYY/MM/<UUID>.<ext>` in `UPLOAD_DIRECTORY`, mounted as `uploads_data` by Compose. | Database stores the opaque `image_path` and image metadata; bytes are not in PostgreSQL. |
+| Backend 2 | Validates/prepares the image, fetches selected-location weather, calls Gemini, validates provider JSON, calculates the combined score, and returns structured analysis. | No database credentials and no permanent image copy. |
+| PostgreSQL/PostGIS | Stores `flood_reports`, `ai_analyses`, users, sessions, incidents, drafts, and audit logs. | Node/Express is the only application owner. |
+| MapLibre | Renders Backend 1's report projection as GeoJSON points and draws the configured basemap. | Map tiles/style are external resources; report data comes from Backend 1. |
 
-## Exact image and AI lifecycle
+## Exact primary lifecycle
 
-1. The browser creates a `File` object when the user chooses one image. `ImagePreview` calls `URL.createObjectURL(file)` for a local preview and revokes it on cleanup. No permanent browser upload exists at this point.
-2. The form sends one `image` part and the report fields to `POST /api/v1/reports/analyze`.
-3. Backend 1 receives the request through `multer.memoryStorage()`, so the original upload is in request memory only. It accepts one file and applies field/part/byte limits.
-4. `file-type` checks the signature and `sharp` checks decodability, dimensions, single-page status, and the configured pixel ceiling. Sharp rotates according to EXIF and re-encodes to JPEG/PNG/WebP. Backend 1 saves the processed bytes under a generated opaque key.
-5. Backend 1 creates one `report_drafts` row and one `ai_analyses` row in a transaction. The draft stores `image_path`, `image_mime`, `image_size`, and `image_sha256`; the analysis starts as `PROCESSING`.
-6. Backend 1 sends the same processed bytes—not a public URL—to Backend 2 as the `image` multipart part. It also sends `analysisId`, `reportId` (the draft UUID during analysis), `description`, `userSeverity`, `latitude`, `longitude`, `mimeType`, and `allowedSeverityValues`. `X-Request-Id` correlates the request.
-7. Backend 2 reads and closes the upload, then Pillow validates the decoded image, applies EXIF orientation, converts to RGB, and bounds the largest dimension before producing a temporary JPEG byte buffer. It does not save a permanent copy.
-8. Backend 2 calls Open-Meteo with the selected coordinates, the previous two days, and current conditions. It sends the prepared image, description, user severity, allowed severities, and weather summary to Gemini 3.1 Flash-Lite. User identity, email, password, storage key, and access tokens are not sent to the model.
-9. Backend 2 validates the model JSON, combines image evidence at 70% and weather at 30%, and returns `SUCCEEDED` data or a controlled error. Backend 1 validates the response again and updates the `ai_analyses` row.
-10. The user reviews the advisory output and submits a valid `finalSeverity`. A transaction creates `flood_reports` using the draft UUID as the report UUID, moves the analysis from `draft_id` to `report_id`, deletes the draft, and writes `REPORT_CREATED` to `audit_logs`.
-11. The map calls `GET /api/v1/reports/map` with a bounded bbox. Backend 1 queries `flood_reports.location`, excludes `REJECTED` rows, returns `ReportMapDto`, and MapLibre renders the persisted coordinates as a marker. A refresh repeats this database read; it does not use frontend mock markers.
+1. The main frontend keeps the selected browser `File` in component state and uses it only in the current `FormData` request. The preview is local to the browser.
+2. `POST /api/v1/reports` reaches Backend 1 as one authenticated multipart request. The request is parsed into memory, not a temporary upload directory.
+3. Backend 1 validates the file signature/MIME, decodes it with Sharp, applies EXIF rotation, re-encodes it, and saves the processed bytes under an opaque local key.
+4. A transaction creates `flood_reports` with `final_severity = severity_claim`, `ai_used = false`, `verification_status = PENDING_REVIEW`, creates `ai_analyses(status = PROCESSING)`, and writes `REPORT_CREATED` to `audit_logs`.
+5. Backend 1 returns HTTP 201 immediately. The report is already persisted and can appear on the map with a grey `?` marker / “AI validation in progress”.
+6. Outside the request transaction, Backend 1 schedules `processReportAnalysis` with `queueMicrotask`. It passes the processed image bytes, report ID, analysis ID, description, user severity, coordinates, MIME, and the original request ID to Backend 2.
+7. Backend 2 validates the internal token, validates/prepares the image with Pillow, fetches Open-Meteo context, and sends the prepared image plus minimal text context to Gemini 3.1 Flash-Lite.
+8. On success, Backend 1 updates `ai_analyses` and the same `flood_reports` row in a transaction: `ai_used = true`, `final_severity = suggestedSeverity`, and `verification_status = PROVISIONAL`. On failure, `ai_analyses` becomes `FAILED` or `TIMED_OUT`; the report remains available with its user-claimed severity and `PENDING_REVIEW` status.
+9. The main frontend polls `GET /api/v1/users/me/reports` every 4 seconds while any own report is `PROCESSING`. Failed analyses expose `Retry AI validation`, which calls `POST /api/v1/reports/:reportId/retry-ai` and re-reads the stored image.
+10. `GET /api/v1/reports/map` returns the persisted row and its privacy-safe AI summary. MapLibre converts coordinates to GeoJSON `[longitude, latitude]` and renders the marker.
 
-## What is not implemented
+## Important current behavior
 
-The repository has no `Media` table or `mediaId`; the stable image reference is `image_path`. There is no signed-URL flow, object-storage provider, AI queue, worker pool, scheduled draft cleanup job, malware scanner, duplicate-image rejection, idempotency key, AI retry/backoff, or per-user analysis concurrency lock. The current code records a 30-minute `report_drafts.expires_at`, but the inspected repository contains no cleanup job that deletes expired drafts/files. These are limitations, not hidden architecture boxes.
+- The main frontend does not wait for AI and does not present an accept/override step before persistence. AI automatically changes the final severity and verification status on successful background processing.
+- The `wireframe/` app still exercises the older draft/human-review path. That path is real code but is not the primary Compose port-3000 experience.
+- The background execution uses Node's in-process `queueMicrotask`; it is not a durable queue, worker service, or retry job.
+- There is no `Media` table or `mediaId`; `image_path` is the stable image reference.
+- There is no signed URL, object-storage provider, malware scanner, duplicate rejection, or scheduled stale-image cleanup.
 
-## Evidence references
+## Evidence
 
-- Frontend: `wireframe/src/features/reports/report-form.tsx`, `wireframe/src/features/reports/image-preview.tsx`, `wireframe/src/features/map/queries.ts`, `wireframe/src/app/(protected)/map/page.tsx`
-- Backend 1: `backend/src/modules/reports/reports.routes.ts`, `reports.controller.ts`, `reports.service.ts`, `reports.ai-client.ts`, `reports.upload.ts`
-- Image pipeline: `backend/src/shared/storage/image-processor.ts`, `backend/src/shared/storage/local-image-storage.ts`, `docker-compose.yml`
+- Main frontend: `frontend/src/features/reports/report-form.tsx`, `frontend/src/features/reports/report-list.tsx`, `frontend/src/features/reports/api.ts`, `frontend/src/features/reports/queries.ts`, `frontend/src/app/(protected)/map/page.tsx`
+- Comparison frontend: `wireframe/src/features/reports/report-form.tsx`, `wireframe/src/features/reports/api.ts`
+- Backend 1: `backend/src/modules/reports/reports.routes.ts`, `reports.controller.ts`, `reports.service.ts`, `reports.ai-client.ts`
+- Image pipeline: `backend/src/shared/storage/image-processor.ts`, `local-image-storage.ts`, `docker-compose.yml`
 - Backend 2: `ai-service/app/routes/analysis.py`, `app/services/image_preprocessing.py`, `app/services/analysis.py`, `app/services/providers.py`, `app/services/weather.py`
 - Schema: `backend/prisma/schema.prisma`, `backend/prisma/migrations/20260714200000_milestone2_ai_workflow/migration.sql`, `backend/prisma/migrations/20260715000000_weather_validated_ai_scores/migration.sql`

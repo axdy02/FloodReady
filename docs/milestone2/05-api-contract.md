@@ -1,12 +1,17 @@
 # API contract
 
-| Endpoint | Role | Purpose |
-| --- | --- | --- |
-| `POST /api/v1/reports/analyze` | authenticated user | multipart report fields + one image; returns draft and analysis outcome |
-| `POST /api/v1/reports/:reportId/submit` | draft owner | JSON `{ "finalSeverity": "..." }`; creates final report |
-| `GET /api/v1/users/me/reports` | authenticated user | own persisted reports |
-| `GET /api/v1/reports/:reportId/image` | owner/moderator/admin | protected evidence bytes |
-| `GET /api/v1/reports/map` | authenticated user | bounded persisted map markers |
-| `POST /internal/v1/flood-analyses` | Backend 1 only | token-protected Backend 2 request containing bounded image/fields and validated coordinates; returns image assessment, weather context, validation score, and outcome |
+The main `frontend/` flow uses these endpoints. All responses use the repository's `{ success, data|error, requestId }` envelope and UUID identifiers.
 
-Every response uses `{ success, data|error, requestId }`. IDs are UUIDs; client-controlled severity values are validated against the fixed enum. `GET /reports/map` exposes only the stored `validationScore` and `validationOutcome` required by the marker detail card, not private image content or exact weather-provider payloads.
+| Endpoint | Role | Purpose |
+|---|---|---|
+| `POST /api/v1/reports` | authenticated user | Multipart report fields plus one image; creates the final report and `ai_analyses(PROCESSING)` and returns `201` immediately |
+| `GET /api/v1/users/me/reports` | authenticated user | Own persisted reports; frontend polls while AI is processing |
+| `POST /api/v1/reports/:reportId/retry-ai` | report owner | Re-runs a failed or timed-out AI analysis from the stored private image |
+| `GET /api/v1/reports/:reportId` | owner/moderator/admin | Protected report detail including persisted AI fields |
+| `GET /api/v1/reports/:reportId/image` | owner/moderator/admin | Protected evidence bytes; storage key is not exposed |
+| `GET /api/v1/reports/map` | authenticated user | Bounded privacy-safe map markers from persisted `flood_reports` |
+| `POST /internal/v1/flood-analyses` | Backend 1 only | Bearer-token protected multipart call to Backend 2 with processed image, report context, and coordinates |
+
+The older `POST /api/v1/reports/analyze` plus `POST /api/v1/reports/:draftId/submit` contract remains for the comparison `wireframe/` app. It is not the canonical port-3000 flow.
+
+`GET /reports/map` exposes marker-safe report and AI status/summary fields, not private image content, `image_path`, reporter identity, credentials, or raw weather-provider payloads.

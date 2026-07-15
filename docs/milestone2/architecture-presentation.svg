@@ -1,119 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
-  <title id="title">FloodReady Milestone 2 architecture</title>
-  <desc id="desc">Authenticated browser report flow through the Next.js frontend, Node Express Backend 1, private local image storage, PostgreSQL PostGIS, FastAPI Backend 2, Open-Meteo, Gemini 3.1 Flash-Lite, and MapLibre.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">FloodReady current Milestone 2 architecture</title>
+  <desc id="desc">Main frontend submits a report to Node Express, which persists it immediately and starts an in-process background call to FastAPI, Open-Meteo, and Gemini. The map reads the same report row and shows AI status.</desc>
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/></marker>
-    <marker id="blue-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/></marker>
-    <marker id="green-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#15803d"/></marker>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0f172a" flood-opacity=".12"/></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#334155"/></marker>
+    <marker id="blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2563eb"/></marker>
+    <marker id="green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#15803d"/></marker>
     <style>
-      text { font-family: Inter, Segoe UI, Arial, sans-serif; fill:#0f172a; }
-      .title { font-size:34px; font-weight:700; }
-      .subtitle { font-size:17px; fill:#475569; }
-      .box { font-size:22px; font-weight:700; }
-      .sub { font-size:15px; fill:#475569; }
-      .body { font-size:16px; }
-      .small { font-size:13px; fill:#475569; }
-      .label { font-size:14px; font-weight:700; }
+      text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#0f172a}.title{font-size:34px;font-weight:700}.sub{font-size:17px;fill:#475569}.box{font-size:22px;font-weight:700}.body{font-size:16px}.small{font-size:13px;fill:#475569}.label{font-size:14px;font-weight:700}
     </style>
   </defs>
-  <rect width="1600" height="1000" fill="#ffffff"/>
-  <text x="54" y="60" class="title">FloodReady Milestone 2 architecture</text>
-  <text x="54" y="90" class="subtitle">Actual report-image lifecycle, AI boundary, persistence, and map read path</text>
-  <rect x="1080" y="38" width="465" height="46" rx="23" fill="#fff7ed" stroke="#fdba74"/>
-  <text x="1312" y="67" text-anchor="middle" class="label" fill="#9a3412">Working tree frontend path: wireframe/</text>
+  <rect width="1600" height="980" fill="#fff"/>
+  <text x="52" y="58" class="title">FloodReady Milestone 2 architecture</text>
+  <text x="52" y="88" class="sub">Current primary flow: persist first, validate with AI in the background, then update the same report</text>
+  <rect x="1110" y="36" width="435" height="44" rx="22" fill="#eff6ff" stroke="#93c5fd"/><text x="1327" y="64" text-anchor="middle" class="label" fill="#1d4ed8">Main frontend :3000 · comparison wireframe :3002</text>
 
-  <rect x="55" y="145" width="340" height="330" rx="20" fill="#eff6ff" stroke="#60a5fa" stroke-width="2" filter="url(#shadow)"/>
-  <text x="82" y="185" class="box">Browser + Next.js UI</text>
-  <text x="82" y="212" class="sub">current source: wireframe/</text>
-  <text x="82" y="256" class="body">• File object and local preview</text>
-  <text x="82" y="284" class="body">• Description, severity, location</text>
-  <text x="82" y="312" class="body">• MapLibre location picker</text>
-  <text x="82" y="340" class="body">• AI review and finalSeverity</text>
-  <text x="82" y="368" class="body">• Persisted map marker view</text>
-  <text x="82" y="414" class="small">No database, upload-volume, or provider access</text>
-  <text x="82" y="436" class="small">Access token in memory; refresh cookie boundary</text>
+  <rect x="55" y="155" width="300" height="245" rx="18" fill="#eff6ff" stroke="#60a5fa" stroke-width="2"/><text x="80" y="195" class="box">Main frontend</text><text x="80" y="222" class="sub">frontend/ · Next.js</text><text x="80" y="264" class="body">Form + one File object</text><text x="80" y="292" class="body">Location + description</text><text x="80" y="320" class="body">Immediate saved state</text><text x="80" y="348" class="body">Map / reports polling</text><text x="80" y="380" class="small">Does not wait for AI</text>
+  <rect x="425" y="135" width="390" height="450" rx="18" fill="#f8fafc" stroke="#334155" stroke-width="2"/><rect x="425" y="135" width="390" height="70" rx="18" fill="#e2e8f0"/><path d="M425 185h390v20H425z" fill="#e2e8f0"/><text x="455" y="177" class="box">Backend 1</text><text x="455" y="197" class="sub">Node / Express · sole DB owner</text><rect x="455" y="235" width="330" height="76" rx="10" fill="#fff" stroke="#cbd5e1"/><text x="475" y="264" class="label">Validate upload</text><text x="475" y="288" class="small">Multer memory · file-type · Sharp</text><rect x="455" y="330" width="330" height="92" rx="10" fill="#fff" stroke="#cbd5e1"/><text x="475" y="359" class="label">Persist immediately</text><text x="475" y="383" class="small">flood_reports + ai_analyses(PROCESSING)</text><text x="475" y="403" class="small">PENDING_REVIEW + REPORT_CREATED audit</text><rect x="455" y="441" width="330" height="112" rx="10" fill="#ecfdf5" stroke="#86efac"/><text x="475" y="470" class="label" fill="#166534">Background processing</text><text x="475" y="494" class="small">queueMicrotask → Backend 2</text><text x="475" y="516" class="small">success: PROVISIONAL + AI severity</text><text x="475" y="538" class="small">failure: analysis FAILED/TIMED_OUT</text>
 
-  <rect x="465" y="145" width="410" height="510" rx="20" fill="#f8fafc" stroke="#334155" stroke-width="2.5" filter="url(#shadow)"/>
-  <rect x="465" y="145" width="410" height="76" rx="20" fill="#e2e8f0"/>
-  <path d="M465 195h410v26H465z" fill="#e2e8f0"/>
-  <text x="495" y="185" class="box">Backend 1 · Node / Express</text>
-  <text x="495" y="208" class="sub">sole application database owner</text>
-  <rect x="495" y="252" width="350" height="70" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
-  <text x="518" y="280" class="label">1. Authenticate + limit</text>
-  <text x="518" y="302" class="small">Bearer token, rate limit, one multipart image</text>
-  <rect x="495" y="340" width="350" height="92" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
-  <text x="518" y="368" class="label">2. Validate + store</text>
-  <text x="518" y="392" class="small">file-type + Sharp; save opaque image_path</text>
-  <text x="518" y="412" class="small">create report_drafts + ai_analyses(PROCESSING)</text>
-  <rect x="495" y="450" width="350" height="92" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
-  <text x="518" y="478" class="label">3. Call Backend 2 + validate reply</text>
-  <text x="518" y="502" class="small">multipart bytes, metadata, service token</text>
-  <text x="518" y="522" class="small">Zod validates structured response before save</text>
-  <rect x="495" y="560" width="350" height="66" rx="12" fill="#dcfce7" stroke="#86efac"/>
-  <text x="670" y="588" text-anchor="middle" class="label" fill="#166534">Draft submit transaction</text>
-  <text x="670" y="610" text-anchor="middle" class="small">finalSeverity → flood_reports + audit_logs</text>
+  <rect x="885" y="135" width="290" height="205" rx="18" fill="#fef3c7" stroke="#d97706" stroke-width="2"/><text x="912" y="175" class="box">Private storage</text><text x="912" y="202" class="sub">LocalImageStorage</text><text x="912" y="244" class="body">Processed image bytes</text><text x="912" y="272" class="body">uploads_data volume</text><text x="912" y="300" class="small">DB stores image_path + metadata</text>
+  <rect x="1220" y="135" width="325" height="205" rx="18" fill="#fef3c7" stroke="#d97706" stroke-width="2"/><text x="1247" y="175" class="box">PostgreSQL + PostGIS</text><text x="1247" y="202" class="sub">one public schema</text><text x="1247" y="244" class="body">flood_reports · ai_analyses</text><text x="1247" y="272" class="body">users · audits · incidents</text><text x="1247" y="300" class="small">generated geography + GiST</text>
 
-  <rect x="960" y="145" width="325" height="230" rx="20" fill="#fef3c7" stroke="#d97706" stroke-width="2" filter="url(#shadow)"/>
-  <text x="990" y="185" class="box">Private image storage</text>
-  <text x="990" y="212" class="sub">LocalImageStorage</text>
-  <text x="990" y="256" class="body">Processed bytes only</text>
-  <text x="990" y="284" class="body">uploads_data volume</text>
-  <text x="990" y="312" class="body">reports/YYYY/MM/&lt;uuid&gt;.&lt;ext&gt;</text>
-  <text x="990" y="348" class="small">PostgreSQL keeps the opaque key and metadata</text>
+  <rect x="885" y="430" width="290" height="205" rx="18" fill="#ecfdf5" stroke="#34d399" stroke-width="2"/><text x="912" y="470" class="box">Backend 2</text><text x="912" y="497" class="sub">FastAPI internal endpoint</text><text x="912" y="539" class="body">Pillow image preparation</text><text x="912" y="567" class="body">Open-Meteo weather lookup</text><text x="912" y="595" class="small">No DB; no permanent image copy</text>
+  <rect x="1220" y="430" width="325" height="205" rx="18" fill="#ecfdf5" stroke="#34d399" stroke-width="2"/><text x="1247" y="470" class="box">Gemini provider</text><text x="1247" y="497" class="sub">Gemini 3.1 Flash-Lite</text><text x="1247" y="539" class="body">Prepared image + description</text><text x="1247" y="567" class="body">User severity + weather summary</text><text x="1247" y="595" class="small">Structured advisory JSON</text>
 
-  <rect x="1325" y="145" width="220" height="230" rx="20" fill="#fef3c7" stroke="#d97706" stroke-width="2" filter="url(#shadow)"/>
-  <text x="1352" y="185" class="box">PostgreSQL</text>
-  <text x="1352" y="212" class="sub">18 + PostGIS 3.6</text>
-  <text x="1352" y="256" class="body">public schema</text>
-  <text x="1352" y="284" class="body">drafts · analyses</text>
-  <text x="1352" y="312" class="body">reports · audit logs</text>
-  <text x="1352" y="348" class="small">generated geography + GiST</text>
+  <rect x="55" y="700" width="300" height="165" rx="18" fill="#f0fdfa" stroke="#2dd4bf" stroke-width="2"/><text x="80" y="740" class="box">MapLibre GL JS</text><text x="80" y="770" class="body">GET /reports/map</text><text x="80" y="798" class="body">ReportMapDto → GeoJSON</text><text x="80" y="826" class="small">Grey ? while PROCESSING</text><text x="80" y="848" class="small">Basemap: OpenFreeMap / OSM</text>
+  <rect x="425" y="700" width="1120" height="165" rx="18" fill="#f8fafc" stroke="#cbd5e1"/><text x="455" y="740" class="label">State transition in the current primary flow</text><text x="455" y="775" class="body">POST /reports → flood_reports(PENDING_REVIEW) + ai_analyses(PROCESSING) → HTTP 201 and map marker</text><text x="455" y="805" class="body">Background success → ai_analyses(SUCCEEDED) + flood_reports(ai_used=true, final_severity=suggestedSeverity, PROVISIONAL)</text><text x="455" y="835" class="small">Background failure → ai_analyses(FAILED/TIMED_OUT); report remains available for manual review and retry</text>
 
-  <rect x="960" y="450" width="325" height="220" rx="20" fill="#ecfdf5" stroke="#34d399" stroke-width="2" filter="url(#shadow)"/>
-  <text x="990" y="490" class="box">Backend 2 · FastAPI</text>
-  <text x="990" y="517" class="sub">/internal/v1/flood-analyses</text>
-  <text x="990" y="556" class="body">Pillow validates + prepares JPEG</text>
-  <text x="990" y="584" class="body">Open-Meteo supplies weather context</text>
-  <text x="990" y="612" class="body">returns validated JSON envelope</text>
-  <text x="990" y="648" class="small">No DB credentials; no permanent image copy</text>
-
-  <rect x="1325" y="450" width="220" height="220" rx="20" fill="#ecfdf5" stroke="#34d399" stroke-width="2" filter="url(#shadow)"/>
-  <text x="1352" y="490" class="box">AI provider</text>
-  <text x="1352" y="518" class="sub">Gemini 3.1</text>
-  <text x="1352" y="540" class="sub">Flash-Lite</text>
-  <text x="1352" y="580" class="body">image + description</text>
-  <text x="1352" y="606" class="body">user severity + weather</text>
-  <text x="1352" y="642" class="small">advisory structured output</text>
-
-  <rect x="55" y="735" width="340" height="150" rx="20" fill="#f0fdfa" stroke="#2dd4bf" stroke-width="2" filter="url(#shadow)"/>
-  <text x="82" y="775" class="box">MapLibre GL JS</text>
-  <text x="82" y="804" class="body">GET /reports/map → ReportMapDto</text>
-  <text x="82" y="832" class="body">GeoJSON [longitude, latitude]</text>
-  <text x="82" y="862" class="small">Basemap: configured OpenFreeMap / OSM</text>
-
-  <path d="M395 300 H465" fill="none" stroke="#2563eb" stroke-width="3" marker-end="url(#blue-arrow)"/>
-  <text x="430" y="286" text-anchor="middle" class="label" fill="#1d4ed8">POST /analyze</text>
-  <path d="M875 300 H960" fill="none" stroke="#d97706" stroke-width="3" marker-end="url(#arrow)"/>
-  <text x="918" y="286" text-anchor="middle" class="label">save bytes</text>
-  <path d="M875 375 H1325" fill="none" stroke="#d97706" stroke-width="3" marker-end="url(#arrow)"/>
-  <text x="1100" y="361" text-anchor="middle" class="label">draft / analysis rows</text>
-  <path d="M875 500 H960" fill="none" stroke="#15803d" stroke-width="3" marker-end="url(#green-arrow)"/>
-  <text x="917" y="486" text-anchor="middle" class="label" fill="#166534">multipart bytes</text>
-  <path d="M1285 560 H1325" fill="none" stroke="#15803d" stroke-width="3" marker-end="url(#green-arrow)"/>
-  <text x="1305" y="546" text-anchor="middle" class="small">provider call</text>
-  <path d="M960 625 C900 625 900 515 875 515" fill="none" stroke="#15803d" stroke-width="3" marker-end="url(#green-arrow)"/>
-  <text x="908" y="642" text-anchor="middle" class="small">structured reply</text>
-  <path d="M635 655 V735 H395" fill="none" stroke="#15803d" stroke-width="3" marker-end="url(#green-arrow)"/>
-  <text x="520" y="720" text-anchor="middle" class="label" fill="#166534">persisted report</text>
-  <path d="M1325 340 C1180 390 1050 390 875 590" fill="none" stroke="#d97706" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
-  <text x="1110" y="410" text-anchor="middle" class="small">map bbox read</text>
-  <path d="M465 825 H395" fill="none" stroke="#15803d" stroke-width="3" marker-end="url(#green-arrow)"/>
-  <text x="430" y="810" text-anchor="middle" class="label" fill="#166534">GET /map</text>
-
-  <rect x="465" y="760" width="930" height="126" rx="18" fill="#f8fafc" stroke="#cbd5e1"/>
-  <text x="495" y="796" class="label">Identifier and storage truth</text>
-  <text x="495" y="824" class="body">X-Request-Id → draftId (also Backend 2 reportId) → analysisId → image_path → uploads_data object</text>
-  <text x="495" y="851" class="small">There is no Media table/mediaId, no signed URL, no queue, and no scheduled expired-draft cleanup in the repository.</text>
-  <text x="1545" y="946" text-anchor="end" class="small">Blue = browser write · green = AI/read response · amber = durable storage</text>
+  <path d="M355 278H425" stroke="#2563eb" stroke-width="3" fill="none" marker-end="url(#blue)"/><text x="390" y="264" text-anchor="middle" class="label" fill="#1d4ed8">multipart</text>
+  <path d="M815 275H885" stroke="#d97706" stroke-width="3" fill="none" marker-end="url(#arrow)"/><text x="850" y="260" text-anchor="middle" class="small">save bytes</text>
+  <path d="M815 360H1220" stroke="#d97706" stroke-width="3" fill="none" marker-end="url(#arrow)"/><text x="1018" y="346" text-anchor="middle" class="small">rows + analysis state</text>
+  <path d="M815 490H885" stroke="#15803d" stroke-width="3" stroke-dasharray="8 6" fill="none" marker-end="url(#green)"/><text x="850" y="476" text-anchor="middle" class="small">async HTTP</text>
+  <path d="M1175 520H1220" stroke="#15803d" stroke-width="3" fill="none" marker-end="url(#green)"/><text x="1198" y="506" text-anchor="middle" class="small">provider</text>
+  <path d="M1220 610C1050 680 900 600 815 530" stroke="#15803d" stroke-width="3" stroke-dasharray="8 6" fill="none" marker-end="url(#green)"/><text x="1000" y="665" text-anchor="middle" class="small">validated result</text>
+  <path d="M425 780H355" stroke="#15803d" stroke-width="3" fill="none" marker-end="url(#green)"/><text x="390" y="766" text-anchor="middle" class="small">map read</text>
+  <text x="1545" y="930" text-anchor="end" class="small">Dashed green path = in-process background AI work; it is not a durable queue.</text>
 </svg>

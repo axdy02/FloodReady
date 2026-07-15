@@ -1,29 +1,16 @@
 flowchart LR
-  U["Authenticated user / browser"]
-  F["Next.js frontend\nworking tree: wireframe/"]
-  B1["Backend 1\nNode.js + Express\n/api/v1"]
-  M["Multer memory\ncurrent request only"]
-  P["Sharp + file-type\nvalidate, rotate, re-encode"]
-  S[("Private local image storage\nUPLOAD_DIRECTORY / uploads_data")]
-  DB[("PostgreSQL 18 + PostGIS 3.6\npublic schema")]
-  B2["Backend 2\nFastAPI\n/internal/v1/flood-analyses"]
-  W["Open-Meteo\nweather context"]
-  AI["Gemini 3.1 Flash-Lite\nconfigured provider/model"]
-  MAP["MapLibre GL JS\nGeoJSON markers"]
-  T["OpenFreeMap / OpenStreetMap\nconfigured basemap resources"]
-
-  U -->|File object, form, location| F
-  F -->|Bearer + multipart POST /reports/analyze| B1
-  B1 --> M --> P --> S
-  B1 -->|draft + PROCESSING analysis| DB
-  B1 -->|Bearer service token + X-Request-Id\nmultipart image bytes + metadata| B2
-  B2 -->|coordinates only for weather lookup| W
-  B2 -->|image + description + user severity + weather summary| AI
-  AI --> B2 -->|validated structured envelope| B1
-  B1 -->|update ai_analyses| DB
-  F -->|human finalSeverity| B1
-  B1 -->|submit draft transaction| DB
-  F -->|GET /reports/map| B1 -->|PostGIS bbox read| DB
-  B1 -->|privacy-safe ReportMapDto| F --> MAP
-  MAP --> T
-  F -->|owner/moderator image GET| B1 --> S
+  U["Authenticated user"] --> F["Main frontend\nfrontend/ :3000"]
+  F -->|POST /api/v1/reports\nBearer + multipart| B1["Backend 1\nNode / Express"]
+  B1 -->|Multer memory| V["file-type + Sharp\nvalidate and re-encode"]
+  V --> S[("Local private image storage\nuploads_data volume")]
+  B1 -->|one transaction| DB[("PostgreSQL + PostGIS")]
+  B1 -->|201 immediately| F
+  B1 -. "queueMicrotask; not durable queue" .-> B2["Backend 2\nFastAPI"]
+  B2 -->|weather lookup| W["Open-Meteo"]
+  B2 -->|prepared image + text + weather| AI["Gemini 3.1 Flash-Lite"]
+  B2 -. "structured response" .-> B1
+  B1 -->|background update\nai_analyses + flood_reports| DB
+  F -->|GET /reports/map\nmanual refresh| B1 --> DB
+  B1 -->|ReportMapDto\nincluding AI status| F --> M["MapLibre GL JS\nGeoJSON markers"]
+  F --> T["OpenFreeMap / OSM\nbasemap resources"]
+  WF["wireframe/ :3002\ncomparison frontend"] -. "alternate /reports/analyze\n+ draft submit path" .-> B1
