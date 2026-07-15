@@ -11,11 +11,13 @@ frontend/ :3000
   -> POST /api/v1/reports (multipart)
   -> Backend 1: validate, store image, write report + PROCESSING analysis
   -> 201 immediately; queueMicrotask -> Backend 2
-  -> Backend 2: Pillow + Open-Meteo + Gemini structured JSON
+  -> Backend 2 LangGraph: weather -> Gemini -> validate -> score
   -> Backend 1: persist result; GET /reports/map -> MapLibre
 ```
 
 Backend 1 is the sole database owner. Backend 2 has no database access and no permanent image storage. `wireframe/ :3002` is only the alternate draft/review comparison app.
+
+LangGraph nodes: `fetch_weather_evidence` -> `analyze_image_evidence` -> `validate_provider_output` -> `score_validation`.
 
 ## Schema in 20 seconds
 

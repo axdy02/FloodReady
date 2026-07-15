@@ -6,9 +6,10 @@ This document describes the current Milestone 2 implementation from the reposito
 
 - `frontend/` is the main Next.js application on port 3000. It submits a report immediately and shows the persisted report while AI validation runs.
 - Backend 1 is the Node/Express service. It owns authentication, request validation, image processing, private local storage, report persistence, and the map API.
-- Backend 2 is the FastAPI service. It owns the internal analysis endpoint, second-stage image preprocessing, Open-Meteo lookup, provider call, and response validation. It has no database access and no permanent image storage.
+- Backend 2 is the FastAPI service. It owns the internal analysis endpoint and runs a bounded LangGraph state graph for second-stage image preprocessing, Open-Meteo lookup, provider call, response validation, and scoring. It has no database access and no permanent image storage.
 - The configured provider is Gemini. The root example environment configures `AI_MODEL=gemini-3.1-flash-lite`.
 - The background handoff is an in-process `queueMicrotask`; there is no durable AI queue or worker service.
+- LangGraph is orchestration inside Backend 2, not a separate backend or database. Its nodes are `fetch_weather_evidence`, `analyze_image_evidence`, `validate_provider_output`, and `score_validation`.
 
 The main flow is:
 
@@ -18,7 +19,7 @@ frontend POST /api/v1/reports
   -> Backend 1 stores private bytes and creates flood_reports + ai_analyses(PROCESSING)
   -> Backend 1 returns 201 immediately
   -> queueMicrotask calls Backend 2
-  -> Backend 2 preprocesses, loads weather, and calls Gemini
+  -> Backend 2 LangGraph preprocesses, loads weather, calls Gemini, validates, and scores
   -> Backend 1 validates and stores the result
   -> frontend polling/map reads expose the updated severity and AI status
 ```
@@ -37,7 +38,7 @@ The comparison app in `wireframe/` still exercises the older draft/review endpoi
 6. One database transaction creates the final `flood_reports` row and its `ai_analyses` row with `PROCESSING` status.
 7. The background call sends the processed bytes in multipart form to Backend 2. Backend 2 does not persist a permanent copy.
 8. Backend 2 closes the upload, validates it with Pillow, applies EXIF orientation, converts to RGB, and creates a bounded JPEG buffer.
-9. Backend 2 calls Gemini with the prepared image and report context, then returns structured JSON.
+9. Backend 2's LangGraph calls Gemini with the prepared image and report context, validates the structured response, and computes the validation score/outcome.
 10. Backend 1 validates the response and updates the analysis/report in one transaction. Failed attempts retain an error code and do not write partial model fields.
 11. The frontend polls the owner report query while analysis is processing. The map reads the persisted report and displays a pending marker or the returned AI severity.
 12. An authorized owner/moderator can later request the image through `GET /api/v1/reports/:reportId/image`; the storage path is never exposed in DTOs.
@@ -109,7 +110,7 @@ The Gemini provider receives one user content part containing the report descrip
 
 The image is attached as Gemini `inlineData`. The request asks for JSON and supplies the provider response schema. Temperature, top-p, and maximum output tokens are not configured.
 
-Processing stages are: internal-token authorization -> upload metadata checks -> Pillow decode/EXIF/RGB/bounded JPEG -> Open-Meteo lookup -> Gemini request -> provider JSON/Pydantic validation -> image/weather validation score -> Backend 2 envelope -> Backend 1/Zod validation -> database update.
+Processing stages are: internal-token authorization -> upload metadata checks -> Pillow decode/EXIF/RGB/bounded JPEG -> LangGraph `fetch_weather_evidence` -> LangGraph `analyze_image_evidence` -> LangGraph `validate_provider_output` -> LangGraph `score_validation` -> Backend 2 envelope -> Backend 1/Zod validation -> database update.
 
 ## 8. AI output contract
 

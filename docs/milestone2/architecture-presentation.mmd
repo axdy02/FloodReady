@@ -6,9 +6,9 @@ flowchart LR
   B1 -->|one transaction| DB[("PostgreSQL + PostGIS")]
   B1 -->|201 immediately| F
   B1 -. "queueMicrotask; not durable queue" .-> B2["Backend 2\nFastAPI"]
-  B2 -->|weather lookup| W["Open-Meteo"]
-  B2 -->|prepared image + text + weather| AI["Gemini 3.1 Flash-Lite"]
-  B2 -. "structured response" .-> B1
+  B2 -->|LangGraph: fetch weather| W["Open-Meteo"]
+  B2 -->|LangGraph: analyze image| AI["Gemini 3.1 Flash-Lite"]
+  B2 -. "validate output + score" .-> B1
   B1 -->|background update\nai_analyses + flood_reports| DB
   F -->|GET /reports/map\nmanual refresh| B1 --> DB
   B1 -->|ReportMapDto\nincluding AI status| F --> M["MapLibre GL JS\nGeoJSON markers"]

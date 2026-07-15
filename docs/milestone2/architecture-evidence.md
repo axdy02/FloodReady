@@ -15,6 +15,7 @@ Paths are relative to the repository root. The current architecture uses `fronte
 | In-process background handoff | `backend/src/modules/reports/reports.service.ts` | `queueMicrotask()` invokes analysis after the response; no durable queue or worker is present. |
 | Backend 1 -> Backend 2 | `backend/src/modules/reports/reports.ai-client.ts`; `ai-service/app/routes/analysis.py` | Bearer service token, request ID, report/analysis IDs, text fields, coordinates, MIME, allowed severities, and processed image bytes. |
 | Backend 2 preprocessing | `ai-service/app/services/image_preprocessing.py` | Validates the upload with Pillow, applies EXIF orientation, converts RGB, and produces a bounded JPEG buffer. |
+| LangGraph orchestration | `ai-service/app/services/analysis.py`; `ai-service/requirements.in` | Runs `fetch_weather_evidence` -> `analyze_image_evidence` -> `validate_provider_output` -> `score_validation` as a bounded, stateless graph. |
 | Weather context | `ai-service/app/services/weather.py` | Calls Open-Meteo for recent/current weather at the report coordinates. |
 | Configured AI provider | `ai-service/app/services/providers.py`; `.env.example`; `ai-service/app/config.py` | Uses the configured Gemini provider/model and requests structured JSON. |
 | AI response validation | `ai-service/app/schemas/analysis.py`; `ai-service/app/services/analysis.py`; Backend 1 AI client | Pydantic validates provider data, Backend 2 computes validation fields, and Backend 1 Zod-validates the response. |

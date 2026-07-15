@@ -17,9 +17,9 @@ flowchart LR
   B1 -->|one transaction| DB[("PostgreSQL + PostGIS")]
   B1 -->|201 immediately| F
   B1 -. "queueMicrotask; not durable queue" .-> B2["Backend 2\nFastAPI"]
-  B2 -->|weather lookup| W["Open-Meteo"]
-  B2 -->|prepared image + text + weather| AI["Gemini 3.1 Flash-Lite"]
-  B2 -. "structured response" .-> B1
+  B2 -->|LangGraph: fetch weather| W["Open-Meteo"]
+  B2 -->|LangGraph: analyze image| AI["Gemini 3.1 Flash-Lite"]
+  B2 -. "validate output + score" .-> B1
   B1 -->|background update\nai_analyses + flood_reports| DB
   F -->|GET /reports/map\nmanual refresh| B1 --> DB
   B1 -->|ReportMapDto\nincluding AI status| F --> M["MapLibre GL JS\nGeoJSON markers"]
@@ -36,7 +36,7 @@ flowchart LR
 | `wireframe/` | Preserved comparison UI. It uses the older `/reports/analyze` → `report_drafts` → `/:draftId/submit` flow and includes human AI-review controls. | Not the canonical port-3000 flow. Do not use its human-override behavior to describe the main frontend. |
 | Backend 1 | Authenticates, rate-limits, validates, processes and stores the image, creates the final report and `ai_analyses(PROCESSING)` row, starts background analysis, persists the provider result, exposes retry, and serves map/private-image reads. | Sole application database owner. The background task is in-process and non-durable. |
 | Private image storage | Stores processed bytes under `reports/YYYY/MM/<UUID>.<ext>` in `UPLOAD_DIRECTORY`, mounted as `uploads_data` by Compose. | Database stores the opaque `image_path` and image metadata; bytes are not in PostgreSQL. |
-| Backend 2 | Validates/prepares the image, fetches selected-location weather, calls Gemini, validates provider JSON, calculates the combined score, and returns structured analysis. | No database credentials and no permanent image copy. |
+| Backend 2 | Runs the bounded LangGraph workflow: prepares the image, fetches selected-location weather, calls Gemini, validates provider JSON, calculates the combined score, and returns structured analysis. | No database credentials and no permanent image copy. |
 | PostgreSQL/PostGIS | Stores `flood_reports`, `ai_analyses`, users, sessions, incidents, drafts, and audit logs. | Node/Express is the only application owner. |
 | MapLibre | Renders Backend 1's report projection as GeoJSON points and draws the configured basemap. | Map tiles/style are external resources; report data comes from Backend 1. |
 
@@ -48,7 +48,7 @@ flowchart LR
 4. A transaction creates `flood_reports` with `final_severity = severity_claim`, `ai_used = false`, `verification_status = PENDING_REVIEW`, creates `ai_analyses(status = PROCESSING)`, and writes `REPORT_CREATED` to `audit_logs`.
 5. Backend 1 returns HTTP 201 immediately. The report is already persisted and can appear on the map with a grey `?` marker / “AI validation in progress”.
 6. Outside the request transaction, Backend 1 schedules `processReportAnalysis` with `queueMicrotask`. It passes the processed image bytes, report ID, analysis ID, description, user severity, coordinates, MIME, and the original request ID to Backend 2.
-7. Backend 2 validates the internal token, validates/prepares the image with Pillow, fetches Open-Meteo context, and sends the prepared image plus minimal text context to Gemini 3.1 Flash-Lite.
+7. Backend 2 validates the internal token and runs its LangGraph: `fetch_weather_evidence` gets Open-Meteo context, `analyze_image_evidence` sends the prepared image plus minimal text context to Gemini 3.1 Flash-Lite, `validate_provider_output` validates the structured response, and `score_validation` computes the combined result.
 8. On success, Backend 1 updates `ai_analyses` and the same `flood_reports` row in a transaction: `ai_used = true`, `final_severity = suggestedSeverity`, and `verification_status = PROVISIONAL`. On failure, `ai_analyses` becomes `FAILED` or `TIMED_OUT`; the report remains available with its user-claimed severity and `PENDING_REVIEW` status.
 9. The main frontend polls `GET /api/v1/users/me/reports` every 4 seconds while any own report is `PROCESSING`. Failed analyses expose `Retry AI validation`, which calls `POST /api/v1/reports/:reportId/retry-ai` and re-reads the stored image.
 10. `GET /api/v1/reports/map` returns the persisted row and its privacy-safe AI summary. MapLibre converts coordinates to GeoJSON `[longitude, latitude]` and renders the marker.
