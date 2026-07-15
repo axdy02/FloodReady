@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, BellRing, BrainCircuit, Camera, ChevronRight, MapPin, Route, Sparkles, Waves, type LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import { Reveal } from "@/components/motion/reveal";
 import { useAppMode } from "@/features/app-mode/app-mode-context";
 import { demoAverageConfidence, demoDisplayReports, demoMapIncidents } from "@/features/app-mode/mode-data";
 import { useIncidentsQuery } from "@/features/incidents/queries";
@@ -14,6 +17,21 @@ const features: { icon: LucideIcon; title: string; text: string }[] = [
   { icon: BellRing, title: "Live alerts", text: "Useful changes, delivered when they matter near you." },
 ];
 
+const slideUpEase = [0.22, 1, 0.36, 1] as const;
+
+function PageLoadReveal({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  const reduceMotion = useReducedMotion();
+
+  return <motion.div
+    className={className}
+    initial={reduceMotion ? false : { opacity: 0, y: 32 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={reduceMotion ? { duration: 0 } : { duration: 0.65, delay, ease: slideUpEase }}
+  >
+    {children}
+  </motion.div>;
+}
+
 export default function PublicLandingPage() {
   const { mode } = useAppMode();
   const liveIncidents = useIncidentsQuery(mode === "live" ? "?limit=100&sort=desc" : "");
@@ -23,15 +41,94 @@ export default function PublicLandingPage() {
   const liveNearby = liveIncidents.data?.items[0];
   const nearbyTitle = demo ? demoNearby?.title ?? "No report nearby" : liveNearby ? liveNearby.category.replaceAll("_", " ") : "No live report nearby";
   const nearbyDetail = demo ? `AI confidence ${demoNearby?.trustScore ?? "—"}%` : liveNearby?.confidenceScore === null || liveNearby === undefined ? "Waiting for live reports" : `AI confidence ${Math.round(liveNearby.confidenceScore)}%`;
-  const stats = demo ? [[String(demoDisplayReports.length), "Connected demo reports"], [String(new Set(demoDisplayReports.map((report) => report.reporter)).size), "Demo contributors"], [String(demoMapIncidents.length), "Map incidents"], [`${demoAverageConfidence}%`, "Average confidence"]] : [[String(reportCount), "Live incidents"], ["—", "Contributor identities"], [String(reportCount), "Map incidents"], ["—", "Live confidence"]];
+  const stats = demo
+    ? [[String(demoDisplayReports.length), "Connected demo reports"], [String(new Set(demoDisplayReports.map((report) => report.reporter)).size), "Demo contributors"], [String(demoMapIncidents.length), "Map incidents"], [`${demoAverageConfidence}%`, "Average confidence"]]
+    : [[String(reportCount), "Live incidents"], ["—", "Contributor identities"], [String(reportCount), "Map incidents"], ["—", "Live confidence"]];
   const modeMessage = demo ? `Demo · ${reportCount} verified reports` : liveIncidents.isLoading ? "Live · loading reports" : `Live · ${reportCount} current incidents`;
 
   return <main className="overflow-hidden bg-[#09090b] text-zinc-50">
-    <section className="mesh relative border-b border-white/[.06] px-5 pt-20 sm:pt-28"><div className="dot-grid pointer-events-none absolute inset-x-0 top-0 h-[30rem] opacity-40" /><div className="relative mx-auto max-w-5xl text-center"><p className="mx-auto inline-flex items-center gap-2 rounded-full border border-blue-400/25 bg-blue-500/10 px-3 py-1.5 text-[11px] font-medium text-blue-300"><span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]" />{modeMessage}</p><h1 className="mx-auto mt-6 max-w-3xl text-5xl font-semibold leading-[.98] tracking-[-.06em] sm:text-7xl">Know before <span className="bg-gradient-to-r from-blue-300 to-cyan-400 bg-clip-text text-transparent">you</span> go.</h1><p className="mx-auto mt-6 max-w-xl text-base leading-7 text-zinc-400">Real-time, community-verified flood intelligence powered by AI. Skip the flooded roads and arrive with more confidence.</p><div className="mt-8 flex flex-wrap justify-center gap-3"><Link className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:scale-[1.02]" href="/map"><MapPin className="size-4" />Open live map <ArrowRight className="size-4" /></Link><Link className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[.03] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[.08]" href="/reports/new"><Camera className="size-4" />Report flooding</Link></div></div><div className="relative mx-auto mt-14 max-w-6xl pb-12"><div className="absolute -inset-5 rounded-[2rem] bg-blue-500/10 blur-3xl" /><div className="relative overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#111113] p-2 shadow-2xl shadow-black/60"><LandingMapPreview /><div className="glass absolute left-6 top-6 rounded-xl px-3 py-2 text-xs"><span className="mr-2 inline-block size-2 rounded-full bg-emerald-400" />{demo ? `Demo conditions · ${demoDisplayReports.length} connected reports` : "Live conditions · updated from the map"}</div><div className="glass absolute bottom-6 left-6 hidden rounded-xl p-4 sm:block"><p className="text-[10px] font-semibold tracking-[.14em] text-zinc-500">ROAD STATUS</p><div className="mt-3 space-y-2 text-xs text-zinc-300"><p><i className="mr-2 inline-block h-1.5 w-5 rounded-full bg-red-500" />Impassable</p><p><i className="mr-2 inline-block h-1.5 w-5 rounded-full bg-red-400" />Heavy waterlogging</p><p><i className="mr-2 inline-block h-1.5 w-5 rounded-full bg-amber-400" />Minor waterlogging</p></div></div><div className="glass absolute bottom-6 right-6 hidden rounded-xl p-4 text-left sm:block"><p className="text-xs font-semibold">{nearbyTitle}</p><p className="mt-1 text-[11px] text-zinc-400">{nearbyDetail}</p></div></div></div></section>
-    <section id="features" className="mx-auto max-w-6xl px-5 py-24"><p className="text-xs font-semibold tracking-[.18em] text-blue-400">HOW IT WORKS</p><div className="mt-4 flex flex-wrap items-end justify-between gap-6"><h2 className="max-w-md text-3xl font-semibold leading-tight tracking-[-.04em] sm:text-4xl">Three steps between<br />you and a drier commute.</h2><p className="max-w-sm text-sm leading-6 text-zinc-500">FloodReady turns local observation into calm, legible decision support.</p></div><div className="mt-10 grid gap-3 md:grid-cols-3">{[["01", "Report", "Share a flood, blocked drain, or road condition in seconds."], ["02", "Verify", "AI and community signals help separate noise from usable information."], ["03", "Navigate", "Choose a route that respects what is happening on the ground."]].map(([number, title, text]) => <article key={number} className="surface-card group rounded-2xl p-6 transition duration-300 hover:-translate-y-1 hover:border-blue-400/30"><div className="flex justify-between"><span className="grid size-9 place-items-center rounded-lg border border-blue-400/20 bg-blue-500/10 text-blue-300"><Waves className="size-4" /></span><span className="text-xl font-semibold text-zinc-700">{number}</span></div><h3 className="mt-8 font-semibold">{title}</h3><p className="mt-2 text-sm leading-6 text-zinc-500">{text}</p></article>)}</div></section>
-    <section className="border-y border-white/[.06] bg-[#0c0c0f]"><div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-24 lg:grid-cols-[.82fr_1.18fr]"><div><p className="text-xs font-semibold tracking-[.18em] text-blue-400">ROAD INTELLIGENCE</p><h2 className="mt-4 text-4xl font-semibold leading-none tracking-[-.05em]">Traffic-style road<br />coloring for water.</h2><p className="mt-6 max-w-sm text-sm leading-7 text-zinc-400">Every road segment is scored from fresh reports, verified observations, and local patterns—so you can understand the city at a glance.</p><div className="mt-7 space-y-3 text-sm text-zinc-300">{[["bg-red-500", "Impassable"], ["bg-red-400", "Heavy flooding"], ["bg-amber-300", "Minor waterlogging"]].map(([color, label]) => <p key={label} className="flex items-center gap-3"><i className={`h-1.5 w-7 rounded-full ${color}`} />{label}</p>)}</div><Link href="/map" className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-blue-300">Explore the live map <ChevronRight className="size-4" /></Link></div><div className="rounded-3xl border border-white/[.08] p-2"><LandingMapPreview small /></div></div></section>
-    <section id="about" className="mx-auto max-w-6xl px-5 py-24"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{stats.map(([stat, label]) => <div key={label} className="surface-card rounded-xl p-5"><p className="text-3xl font-semibold tracking-[-.04em]">{stat}</p><p className="mt-1 text-xs text-zinc-500">{label}</p></div>)}</div><div className="mt-24 grid gap-3 md:grid-cols-4">{features.map(({ icon: Icon, title, text }) => <article key={title} className="group rounded-2xl border border-white/[.06] p-5 transition hover:bg-white/[.03]"><Icon className="size-5 text-blue-400" /><h3 className="mt-6 text-sm font-semibold">{title}</h3><p className="mt-2 text-xs leading-5 text-zinc-500">{text}</p></article>)}</div></section>
-    <section className="mx-auto max-w-6xl px-5 pb-24"><div className="relative overflow-hidden rounded-3xl border border-blue-400/15 bg-[radial-gradient(circle_at_85%_20%,rgba(37,99,235,.25),transparent_28rem),#101116] px-7 py-12 sm:px-12"><Sparkles className="absolute right-12 top-10 size-24 text-blue-400/10" /><h2 className="relative max-w-xl text-3xl font-semibold leading-[1.03] tracking-[-.05em] sm:text-5xl">Your city is flooding faster than the map can update.<br /><span className="text-blue-400">Except now.</span></h2><p className="relative mt-5 max-w-md text-sm leading-6 text-zinc-400">Open FloodReady and turn a local report into a more informed next move.</p><div className="relative mt-7 flex flex-wrap gap-3"><Link href="/map" className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-zinc-950">Open live map</Link><Link href="/dashboard" className="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold">Go to dashboard</Link></div></div></section>
+    <section id="overview" className="mesh relative scroll-mt-24 border-b border-white/[.06] px-5 pt-20 sm:pt-28">
+      <div className="dot-grid pointer-events-none absolute inset-x-0 top-0 h-[30rem] opacity-40" />
+      <div className="relative mx-auto max-w-5xl text-center">
+        <PageLoadReveal delay={0.04}>
+          <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-blue-400/25 bg-blue-500/10 px-3 py-1.5 text-[11px] font-medium text-blue-300">
+            <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]" />
+            {modeMessage}
+          </p>
+        </PageLoadReveal>
+        <PageLoadReveal delay={0.12}>
+          <h1 className="mx-auto mt-6 max-w-3xl text-5xl font-semibold leading-[.98] tracking-[-.06em] sm:text-7xl">
+            Know before <span className="bg-gradient-to-r from-blue-300 to-cyan-400 bg-clip-text text-transparent">you</span> go.
+          </h1>
+        </PageLoadReveal>
+        <PageLoadReveal delay={0.2}>
+          <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-zinc-400">Real-time, community-verified flood intelligence powered by AI. Skip the flooded roads and arrive with more confidence.</p>
+        </PageLoadReveal>
+        <PageLoadReveal delay={0.28}>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:scale-[1.02]" href="/map"><MapPin className="size-4" />Open live map <ArrowRight className="size-4" /></Link>
+            <Link className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[.03] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[.08]" href="/reports/new"><Camera className="size-4" />Report flooding</Link>
+          </div>
+        </PageLoadReveal>
+      </div>
+
+      <PageLoadReveal className="relative mx-auto mt-14 max-w-6xl pb-12" delay={0.36}>
+        <div className="absolute -inset-5 rounded-[2rem] bg-blue-500/10 blur-3xl" />
+        <div className="relative overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#111113] p-2 shadow-2xl shadow-black/60">
+          <LandingMapPreview />
+          <div className="glass absolute left-6 top-6 rounded-xl px-3 py-2 text-xs"><span className="mr-2 inline-block size-2 rounded-full bg-emerald-400" />{demo ? `Demo conditions · ${demoDisplayReports.length} connected reports` : "Live conditions · updated from the map"}</div>
+          <div className="glass absolute bottom-6 left-6 hidden rounded-xl p-4 sm:block">
+            <p className="text-[10px] font-semibold tracking-[.14em] text-zinc-500">ROAD STATUS</p>
+            <div className="mt-3 space-y-2 text-xs text-zinc-300">
+              <p><i className="mr-2 inline-block h-1.5 w-5 rounded-full bg-red-500" />Impassable</p>
+              <p><i className="mr-2 inline-block h-1.5 w-5 rounded-full bg-red-400" />Heavy waterlogging</p>
+              <p><i className="mr-2 inline-block h-1.5 w-5 rounded-full bg-amber-400" />Minor waterlogging</p>
+            </div>
+          </div>
+          <div className="glass absolute bottom-6 right-6 hidden rounded-xl p-4 text-left sm:block"><p className="text-xs font-semibold">{nearbyTitle}</p><p className="mt-1 text-[11px] text-zinc-400">{nearbyDetail}</p></div>
+        </div>
+      </PageLoadReveal>
+    </section>
+
+    <section id="features" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-24">
+      <Reveal>
+        <p className="text-xs font-semibold tracking-[.18em] text-blue-400">HOW IT WORKS</p>
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-6"><h2 className="max-w-md text-3xl font-semibold leading-tight tracking-[-.04em] sm:text-4xl">Three steps between<br />you and a drier commute.</h2><p className="max-w-sm text-sm leading-6 text-zinc-500">FloodReady turns local observation into calm, legible decision support.</p></div>
+      </Reveal>
+      <div className="mt-10 grid gap-3 md:grid-cols-3">
+        {[["01", "Report", "Share a flood, blocked drain, or road condition in seconds."], ["02", "Verify", "AI and community signals help separate noise from usable information."], ["03", "Navigate", "Choose a route that respects what is happening on the ground."]].map(([number, title, text], index) => <Reveal key={number} delay={index * 0.1}>
+          <article className="surface-card group rounded-2xl p-6 transition duration-300 hover:-translate-y-1 hover:border-blue-400/30">
+            <div className="flex justify-between"><span className="grid size-9 place-items-center rounded-lg border border-blue-400/20 bg-blue-500/10 text-blue-300"><Waves className="size-4" /></span><span className="text-xl font-semibold text-zinc-700">{number}</span></div>
+            <h3 className="mt-8 font-semibold">{title}</h3><p className="mt-2 text-sm leading-6 text-zinc-500">{text}</p>
+          </article>
+        </Reveal>)}
+      </div>
+    </section>
+
+    <section className="border-y border-white/[.06] bg-[#0c0c0f]">
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-24 lg:grid-cols-[.82fr_1.18fr]">
+        <Reveal>
+          <p className="text-xs font-semibold tracking-[.18em] text-blue-400">ROAD INTELLIGENCE</p>
+          <h2 className="mt-4 text-4xl font-semibold leading-none tracking-[-.05em]">Traffic-style road<br />coloring for water.</h2>
+          <p className="mt-6 max-w-sm text-sm leading-7 text-zinc-400">Every road segment is scored from fresh reports, verified observations, and local patterns—so you can understand the city at a glance.</p>
+          <div className="mt-7 space-y-3 text-sm text-zinc-300">{[["bg-red-500", "Impassable"], ["bg-red-400", "Heavy flooding"], ["bg-amber-300", "Minor waterlogging"]].map(([color, label]) => <p key={label} className="flex items-center gap-3"><i className={`h-1.5 w-7 rounded-full ${color}`} />{label}</p>)}</div>
+          <Link href="/map" className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-blue-300">Explore the live map <ChevronRight className="size-4" /></Link>
+        </Reveal>
+        <Reveal delay={0.12}><div className="rounded-3xl border border-white/[.08] p-2"><LandingMapPreview small /></div></Reveal>
+      </div>
+    </section>
+
+    <section id="about" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-24">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map(([stat, label], index) => <Reveal key={label} delay={index * 0.08}><div className="surface-card rounded-xl p-5"><p className="text-3xl font-semibold tracking-[-.04em]">{stat}</p><p className="mt-1 text-xs text-zinc-500">{label}</p></div></Reveal>)}
+      </div>
+      <div className="mt-24 grid gap-3 md:grid-cols-4">
+        {features.map(({ icon: Icon, title, text }, index) => <Reveal key={title} delay={index * 0.08}><article className="group rounded-2xl border border-white/[.06] p-5 transition hover:bg-white/[.03]"><Icon className="size-5 text-blue-400" /><h3 className="mt-6 text-sm font-semibold">{title}</h3><p className="mt-2 text-xs leading-5 text-zinc-500">{text}</p></article></Reveal>)}
+      </div>
+    </section>
+
+    <section className="mx-auto max-w-6xl px-5 pb-24"><Reveal><div className="relative overflow-hidden rounded-3xl border border-blue-400/15 bg-[radial-gradient(circle_at_85%_20%,rgba(37,99,235,.25),transparent_28rem),#101116] px-7 py-12 sm:px-12"><Sparkles className="absolute right-12 top-10 size-24 text-blue-400/10" /><h2 className="relative max-w-xl text-3xl font-semibold leading-[1.03] tracking-[-.05em] sm:text-5xl">Your city is flooding faster than the map can update.<br /><span className="text-blue-400">Except now.</span></h2><p className="relative mt-5 max-w-md text-sm leading-6 text-zinc-400">Open FloodReady and turn a local report into a more informed next move.</p><div className="relative mt-7 flex flex-wrap gap-3"><Link href="/map" className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-zinc-950">Open live map</Link><Link href="/dashboard" className="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold">Go to dashboard</Link></div></div></Reveal></section>
+
     <footer className="border-t border-white/[.06] px-5 py-8 text-center text-xs text-zinc-600"><h2 className="sr-only">Evidence is unverified when submitted</h2><h2 className="sr-only">No data does not mean safe</h2><span className="font-medium text-zinc-400">FloodReady</span> · Community-powered flood intelligence. <span className="ml-2">Evidence is unverified when submitted.</span><span className="ml-2">No data does not mean safe.</span></footer>
   </main>;
 }
