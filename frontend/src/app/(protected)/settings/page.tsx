@@ -15,7 +15,7 @@ export default function SettingsPage() {
       <ConnectionCheck />
       <Setting icon={<Bell className="size-5" />} title="Notifications" text="Critical nearby incidents, route changes, and verification updates." control={<button className="rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-semibold">Enabled</button>} />
       <Setting icon={<Moon className="size-5" />} title="Appearance" text="FloodReady uses a dark map interface optimized for night-time visibility." control={<select className="rounded-lg border border-white/10 bg-[#111113] px-3 py-1.5 text-xs"><option>Dark</option><option>System</option></select>} />
-      <Setting icon={<Globe2 className="size-5" />} title="Language" text="Choose the language used for alerts and navigation guidance." control={<select className="rounded-lg border border-white/10 bg-[#111113] px-3 py-1.5 text-xs"><option>English</option><option>Hindi</option></select>} />
+      <Setting icon={<Globe2 className="size-5" />} title="Language" text="Choose the language used for weather summaries and navigation guidance." control={<select className="rounded-lg border border-white/10 bg-[#111113] px-3 py-1.5 text-xs"><option>English</option><option>Hindi</option></select>} />
       <Setting icon={<LockKeyhole className="size-5" />} title="Privacy and security" text="Manage your profile visibility, password, and active sessions." control={<button className="text-xs font-semibold text-blue-300">Manage</button>} />
     </div>
   </main>;

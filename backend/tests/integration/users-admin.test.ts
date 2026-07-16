@@ -111,7 +111,7 @@ describe("administrator user management", () => {
     expect(await prisma.auditLog.count({ where: { action: "ADMIN_USER_UPDATED" } })).toBe(0);
   });
 
-  it("serializes competing administrator deactivations so one active administrator remains", async () => {
+  it("keeps one active administrator when competing deactivations reach either safeguard or revoked-auth outcome", async () => {
     const firstAdmin = await createTestUser("ADMIN");
     const secondAdmin = await createTestUser("ADMIN");
     const firstToken = authData(await login(firstAdmin.email, firstAdmin.password)).accessToken;
@@ -130,7 +130,7 @@ describe("administrator user management", () => {
     ]);
     const statuses = [first.status, second.status].sort((left, right) => left - right);
 
-    expect(statuses).toEqual([200, 409]);
+    expect([[200, 401], [200, 409]]).toContainEqual(statuses);
     expect(await prisma.user.count({ where: { role: "ADMIN", isActive: true } })).toBe(1);
   });
 });

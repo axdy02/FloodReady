@@ -8,6 +8,7 @@ import {
   parseReportListQuery,
   parseReportMetadata,
   reportIdParamsSchema,
+  submitReportSchema,
   updateReportSchema,
 } from "./reports.validation.js"
 import { normalizeMultipartBody } from "./reports.upload.js"
@@ -42,12 +43,49 @@ export class ReportsController {
         imageMime: image.mimetype,
         ipAddress: clientIp(request),
         serverTime,
-      })
+      }, request.requestId)
       response.status(201).json({ success: true, data: report, requestId: request.requestId })
     } finally {
       request.uploadCapacityRelease?.()
       request.uploadCapacityRelease = undefined
     }
+  }
+
+  readonly analyze: RequestHandler = async (request, response) => {
+    try {
+      const actor = authenticatedUser(request)
+      const image = request.file
+      if (image === undefined || image.buffer.length === 0) throw new AppError(422, "INVALID_IMAGE", "Invalid image")
+      const serverTime = new Date()
+      const metadata = validateRequest("body", () => parseReportMetadata(normalizeMultipartBody(request.body as unknown), serverTime))
+      const draft = await this.service.analyze({
+        ...metadata, actorId: actor.id, imageBytes: image.buffer, imageMime: image.mimetype,
+        ipAddress: clientIp(request), serverTime,
+      }, request.requestId)
+      response.status(201).json({ success: true, data: draft, requestId: request.requestId })
+    } finally {
+      request.uploadCapacityRelease?.()
+      request.uploadCapacityRelease = undefined
+    }
+  }
+
+  readonly submitDraft: RequestHandler = async (request, response) => {
+    const actor = authenticatedUser(request)
+    const { reportId } = validateRequest("params", () => reportIdParamsSchema.parse(request.params))
+    const report = await this.service.submitDraft(
+      reportId,
+      actor.id,
+      validateRequest("body", () => submitReportSchema.parse(request.body)),
+      clientIp(request),
+    )
+    response.status(201).json({ success: true, data: report, requestId: request.requestId })
+  }
+
+  readonly retryAnalysis: RequestHandler = async (request, response) => {
+    const actor = authenticatedUser(request)
+    const { reportId } = validateRequest("params", () => reportIdParamsSchema.parse(request.params))
+    const report = await this.service.retryAnalysis(reportId, actor.id, request.requestId)
+    response.status(202).json({ success: true, data: report, requestId: request.requestId })
   }
 
   readonly get: RequestHandler = async (request, response) => {

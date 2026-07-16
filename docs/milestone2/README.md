@@ -6,6 +6,7 @@ Use these files for the current presentation and evaluator review:
 - [02-schema.md](02-schema.md) - current Prisma entities and the primary report/analysis state transition.
 - [03-ai-workflow.md](03-ai-workflow.md) - concise AI workflow summary.
 - [04-image-lifecycle.md](04-image-lifecycle.md) - concise image-storage summary.
+- [05-api-contract.md](05-api-contract.md) - complete current Backend 1, Backend 2, and Next.js helper API reference.
 - [AI_SYSTEM_README.md](AI_SYSTEM_README.md) - full AI contract, validation, privacy, failure, retry, and known limitations.
 - [architecture-presentation.svg](architecture-presentation.svg) - slide-ready architecture diagram.
 - [schema-presentation.svg](schema-presentation.svg) - slide-ready schema diagram.
@@ -19,4 +20,4 @@ Use these files for the current presentation and evaluator review:
 - `wireframe/` is retained as an alternate comparison/testing app and runs on port 3002. It exercises the older draft/review endpoints.
 - `docker-compose.yml` defines both services. Both use the same Backend 1 API, PostgreSQL data, private image storage, and AI-result fields.
 
-The files marked as archived are historical records from earlier repository states and should not be used as the current architecture claim.
+Files with `Archived` in their title are preserved historical records from earlier repository states. They are not current architecture, API, test, or presentation claims; use the files listed above instead.

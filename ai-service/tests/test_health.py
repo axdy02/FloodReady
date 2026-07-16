@@ -8,4 +8,4 @@ def test_health(client: TestClient) -> None:
 
 
 def test_ready(client: TestClient) -> None:
-    assert client.get("/health/ready").json()["data"] == {"status": "ready"}
+    assert client.get("/health/ready").json()["data"] == {"status": "ready", "provider": "degraded"}

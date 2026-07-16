@@ -1,0 +1,74 @@
+"use client";
+
+import Link from "next/link";
+import { MapPin, Upload, X } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { BlurText } from "@/components/motion/blur-text";
+import { Reveal } from "@/components/motion/reveal";
+import { demoIncidents, mapIncidents } from "@/data/demo/incidents";
+import { useAppMode } from "@/features/app-mode/app-mode-context";
+import { authStore } from "@/features/auth/auth-store";
+import { useIncidentsQuery } from "@/features/incidents/queries";
+import { type MapLayerState, MapCanvas } from "@/features/map/map-canvas";
+import { type LocationValue } from "@/features/map/types";
+import { reportsApi } from "@/features/reports/api";
+import { reportFormSchema, validateImage } from "@/features/reports/report-form-schema";
+import { loadClientEnvironment } from "@/lib/env/client";
+
+const layers: MapLayerState = { roads: true, markers: true, heatmap: false, shelters: false, weather: false, traffic: false };
+const categories = [["FLOODED_ROAD", "Flooded road"], ["ROAD_WATERLOGGING", "Waterlogging"], ["CLOGGED_DRAIN", "Blocked drain"], ["OPEN_MANHOLE", "Open manhole"], ["FALLEN_TREE", "Fallen tree"], ["OTHER", "Other"]] as const;
+const severities = [["MINOR", "Low"], ["MODERATE", "Moderate"], ["SEVERE", "High"], ["IMPASSABLE", "Critical"]] as const;
+
+export function ReportForm() {
+  const env = loadClientEnvironment();
+  const { mode } = useAppMode();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [category, setCategory] = useState<(typeof categories)[number][0]>("FLOODED_ROAD");
+  const [severity, setSeverity] = useState<(typeof severities)[number][0]>("MODERATE");
+  const [description, setDescription] = useState("");
+  const [location, setLocation] = useState<LocationValue | null>({ latitude: 28.249, longitude: 77.0635, locationSource: "MANUAL", gpsAccuracy: null });
+  const [files, setFiles] = useState<File[]>([]);
+  const [anonymous, setAnonymous] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const liveIncidents = useIncidentsQuery(mode === "live" ? "?limit=100&sort=desc" : "");
+  const nearbyIncidents = mode === "demo" ? mapIncidents : liveIncidents.data?.items ?? [];
+
+  const addFiles = (candidate: FileList | File[]) => {
+    const accepted = Array.from(candidate).filter((file) => validateImage(file, 10 * 1048576)).slice(0, 5);
+    if (accepted.length === 0) { setError("Add up to five JPEG, PNG, or WebP images under 10 MB."); return; }
+    setFiles(accepted);
+    setError(null);
+  };
+  const pickMapLocation = useCallback(({ latitude, longitude }: { latitude: number; longitude: number }) => setLocation({ latitude, longitude, locationSource: "MANUAL", gpsAccuracy: null }), []);
+  const useCurrentLocation = () => navigator.geolocation?.getCurrentPosition((position) => setLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude, locationSource: "DEVICE_GPS", gpsAccuracy: position.coords.accuracy }), () => setError("Location is unavailable. Pick a point on the map instead."));
+  const submit = async () => {
+    const parsed = reportFormSchema.safeParse({ category, severity, description });
+    const evidence = files[0];
+    if (!parsed.success || location === null || evidence === undefined) { setError("Add evidence, choose a location, and complete the required details."); return; }
+    if (mode === "demo") { setSuccess(true); return; }
+    const token = authStore.getAccessToken();
+    if (token === undefined) { setError("Sign in is required to submit a live report."); return; }
+    setSubmitting(true);
+    const form = new FormData();
+    form.append("category", parsed.data.category);
+    form.append("severityClaim", parsed.data.severity ?? "");
+    form.append("description", parsed.data.description);
+    form.append("latitude", String(location.latitude));
+    form.append("longitude", String(location.longitude));
+    form.append("locationSource", location.locationSource);
+    form.append("capturedAt", new Date().toISOString());
+    form.append("image", evidence);
+    try { await reportsApi.create(form, token); setSuccess(true); } catch { setError("Unable to submit the report. Please try again."); } finally { setSubmitting(false); }
+  };
+  const similarDemoIncident = mode === "demo" && location !== null && demoIncidents.some((incident) => Math.abs(incident.latitude - location.latitude) < 0.003 && Math.abs(incident.longitude - location.longitude) < 0.003);
+
+  if (success) return <Reveal><section className="surface-card mx-auto max-w-xl rounded-2xl p-8 text-center"><div className="mx-auto grid size-12 place-items-center rounded-full bg-emerald-400/15 text-xl text-emerald-300">✓</div><BlurText as="h1" text="Report submitted" delay={140} className="mt-5 text-2xl font-semibold" /><p className="mt-2 text-sm leading-6 text-zinc-400">Thank you. Your report is marked as submitted and will be verified before it affects live guidance.</p><div className="mt-6 flex justify-center gap-3"><Link href="/reports" className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-950">View reports</Link><Link href="/map" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm">Back to map</Link></div></section></Reveal>;
+
+  return <main className="mx-auto grid max-w-7xl gap-4 px-5 py-8 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,.9fr)]"><Reveal><section className="surface-card rounded-2xl p-5 sm:p-6"><p className="text-xs font-semibold tracking-[.18em] text-blue-400">REPORT INCIDENT · {mode.toUpperCase()} DATA</p><BlurText as="h1" text="Report Incident" delay={140} className="mt-2 text-2xl font-semibold tracking-[-.03em]" /><p className="mt-2 text-sm text-zinc-500">Help your community by reporting real-time flood conditions.</p><FormSection number="1" title="Incident details"><div className="grid gap-3 sm:grid-cols-2">{categories.map(([value, label]) => <button type="button" key={value} onClick={() => setCategory(value)} className={`rounded-xl border px-3 py-2.5 text-left text-sm transition ${category === value ? "border-blue-400/60 bg-blue-500/10 text-blue-200" : "border-white/[.08] bg-black/10 text-zinc-400 hover:bg-white/[.04]"}`}>{label}</button>)}</div><p className="mt-5 text-xs font-medium text-zinc-500">Severity</p><div className="mt-2 flex flex-wrap gap-2">{severities.map(([value, label]) => <button type="button" key={value} onClick={() => setSeverity(value)} className={`rounded-full border px-3 py-1.5 text-xs ${severity === value ? value === "IMPASSABLE" ? "border-red-400 bg-red-500 text-white" : "border-blue-400 bg-blue-500 text-white" : "border-white/[.08] text-zinc-400"}`}>{label}</button>)}</div></FormSection><FormSection number="2" title="Location"><div className="flex flex-wrap gap-2"><input aria-label="Search location" placeholder="Search location" className="min-w-44 flex-1 rounded-xl border border-white/[.08] bg-black/20 px-3 py-2.5 text-sm outline-none placeholder:text-zinc-600" /><button type="button" onClick={useCurrentLocation} className="rounded-xl border border-white/10 px-3 py-2 text-xs font-medium">Use current location</button></div><p className="mt-3 flex items-center gap-2 text-xs text-zinc-400"><MapPin className="size-3 text-blue-400" />{location ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}` : "Click the map to place a pin"}</p><p className="mt-1 text-[11px] text-zinc-600">Click anywhere on the map to move your report pin.</p></FormSection><FormSection number="3" title="Description"><textarea value={description} onChange={(event) => setDescription(event.target.value.slice(0, 1000))} rows={4} placeholder="Describe the flooding, road conditions, visible hazards, and the direction affected." className="w-full resize-none rounded-xl border border-white/[.08] bg-black/20 p-3 text-sm outline-none placeholder:text-zinc-600" /><p className="mt-1 text-right text-[10px] text-zinc-600">{description.length}/1000</p></FormSection><FormSection number="4" title="Upload media"><button type="button" onClick={() => fileInput.current?.click()} onDrop={(event) => { event.preventDefault(); addFiles(event.dataTransfer.files); }} onDragOver={(event) => event.preventDefault()} className="flex w-full flex-col items-center rounded-xl border border-dashed border-white/[.14] bg-black/10 px-4 py-6 text-center hover:border-blue-400/50"><Upload className="size-5 text-blue-400" /><span className="mt-2 text-sm font-medium">Drop evidence here or click to browse</span><span className="mt-1 text-xs text-zinc-600">JPEG, PNG, or WebP · maximum 5 files</span></button><input ref={fileInput} className="sr-only" type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={(event) => { if (event.target.files) addFiles(event.target.files); }} />{files.length ? <div className="mt-3 flex flex-wrap gap-2">{files.map((file) => <div className="flex items-center gap-2 rounded-lg border border-white/[.08] bg-white/[.03] px-2 py-1.5 text-xs" key={file.name}><span className="max-w-32 truncate">{file.name}</span><button aria-label={`Remove ${file.name}`} onClick={() => setFiles((current) => current.filter((item) => item !== file))}><X className="size-3 text-zinc-500" /></button></div>)}</div> : null}</FormSection><label className="mt-5 flex items-center gap-2 text-xs text-zinc-400"><input checked={anonymous} onChange={(event) => setAnonymous(event.target.checked)} type="checkbox" className="size-4 accent-blue-500" />Submit anonymously</label>{similarDemoIncident ? <p className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/[.06] px-3 py-2 text-xs text-amber-200">A similar demo incident exists nearby. Add your evidence if conditions have changed.</p> : null}{error ? <p role="alert" className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-xs text-red-200">{error}</p> : null}<div className="mt-5 flex gap-3"><button type="button" onClick={() => void submit()} disabled={submitting} className="rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-400 disabled:opacity-60">{submitting ? "Submitting…" : "Submit report"}</button><Link href="/map" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium">Cancel</Link></div></section></Reveal><Reveal delay={0.08}><section className="relative min-h-[36rem] overflow-hidden rounded-2xl border border-white/[.08]"><div className="absolute left-4 top-4 z-10 rounded-xl border border-white/10 bg-[#111113]/90 px-3 py-2 text-xs backdrop-blur"><span className="font-semibold">Nearby reports ({nearbyIncidents.length})</span><p className="mt-1 text-zinc-500">{mode === "demo" ? "Shared demo reports" : liveIncidents.isLoading ? "Loading live incidents" : "Click map to place your pin"}</p></div><MapCanvas viewport={{ latitude: env.NEXT_PUBLIC_DEFAULT_MAP_LATITUDE, longitude: env.NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE, zoom: env.NEXT_PUBLIC_DEFAULT_MAP_ZOOM }} attribution={env.NEXT_PUBLIC_MAP_ATTRIBUTION} styleUrl={env.NEXT_PUBLIC_MAP_STYLE_URL} incidents={nearbyIncidents} layers={layers} location={location} onMapLocationSelect={pickMapLocation} /></section></Reveal></main>;
+}
+
+function FormSection({ number, title, children }: { number: string; title: string; children: React.ReactNode }) {
+  return <section className="mt-6 border-t border-white/[.06] pt-5"><h2 className="text-sm font-semibold"><span className="mr-2 text-zinc-500">{number}.</span>{title}</h2><div className="mt-3">{children}</div></section>;
+}

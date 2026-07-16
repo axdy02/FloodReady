@@ -1,4 +1,6 @@
-# FloodReady Milestone 1 Compatibility Report
+# Archived: FloodReady Milestone 1 Compatibility Report
+
+> Historical audit recorded on 2026-07-12. It predates the current Milestone 2 direct-report, Backend 2, Gemini, and LangGraph implementation. Do not use it as the current API or architecture reference; use [docs/milestone2/05-api-contract.md](milestone2/05-api-contract.md) and [docs/milestone2/01-architecture.md](milestone2/01-architecture.md).
 
 ## Scope and evidence
 

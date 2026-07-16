@@ -15,6 +15,13 @@ async def health(request: Request) -> JSONResponse:
 @router.get("/health/ready")
 async def ready(request: Request) -> JSONResponse:
     return JSONResponse(
-        content={"success": True, "data": {"status": "ready"}, "requestId": request.state.request_id},
+        content={
+            "success": True,
+            "data": {
+                "status": "ready",
+                "provider": "available" if request.app.state.provider.available else "degraded",
+            },
+            "requestId": request.state.request_id,
+        },
         headers={"Cache-Control": "no-store"},
     )

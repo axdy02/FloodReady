@@ -1,0 +1,3 @@
+import { z } from "zod";
+export const reportFormSchema = z.object({ category: z.enum(["ROAD_WATERLOGGING", "FLOODED_ROAD", "CLOGGED_DRAIN", "OVERFLOWING_DRAIN", "OPEN_MANHOLE", "FALLEN_TREE", "STRANDED_VEHICLE", "UNDERPASS_FLOODING", "OTHER"]), severity: z.enum(["UNKNOWN", "MINOR", "MODERATE", "SEVERE", "IMPASSABLE"]).optional(), description: z.string().transform((value) => value.trim()).refine((value) => value.length <= 1000) }).strict();
+export function validateImage(file: File, maxBytes: number): boolean { return ["image/jpeg", "image/png", "image/webp"].includes(file.type) && file.size >= 1 && file.size <= maxBytes; }

@@ -1,69 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { Search, X } from "lucide-react";
-import { useMemo, useState } from "react";
-import { useAppMode } from "@/features/app-mode/app-mode-context";
-import { demoDisplayReports, demoMapIncidents, toLiveDisplayReport, type DisplayReport } from "@/features/app-mode/mode-data";
-import { useIncidentsQuery } from "@/features/incidents/queries";
-import { type MapLayerState, MapCanvas } from "@/features/map/map-canvas";
-import { useOwnReportsQuery } from "@/features/reports/queries";
-import { loadClientEnvironment } from "@/lib/env/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, ArrowUpRight, Camera, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { authStore } from "@/features/auth/auth-store";
+import { reportsApi } from "@/features/reports/api";
+import { useOwnReportsQuery, useReportImageQuery } from "@/features/reports/queries";
+import type { ReportDto } from "@/lib/api/contracts";
 
-const mapLayers: MapLayerState = { roads: true, markers: true, heatmap: false, shelters: false, weather: false, traffic: false };
+function label(value: string): string { return value.toLowerCase().replaceAll("_", " ").replace(/^./u, (character) => character.toUpperCase()); }
+function aiText(report: ReportDto): string { if (report.aiAnalysis === null || report.aiAnalysis.status === "PROCESSING") return "Validating…"; if (report.aiAnalysis.status !== "SUCCEEDED" || report.aiAnalysis.suggestedSeverity === null) return "Manual review required"; return label(report.aiAnalysis.suggestedSeverity); }
+function validationText(report: ReportDto): string { if (report.aiAnalysis === null || report.aiAnalysis.status === "PROCESSING") return "AI validation in progress"; return report.aiAnalysis.status === "SUCCEEDED" ? "Validation complete" : "Validation could not complete"; }
 
 export function ReportList() {
-  const env = loadClientEnvironment();
-  const { mode } = useAppMode();
-  const [query, setQuery] = useState("");
-  const [severity, setSeverity] = useState("All severities");
-  const [status, setStatus] = useState("All statuses");
-  const [view, setView] = useState<"list" | "map">("list");
-  const [selected, setSelected] = useState<DisplayReport | null>(null);
-  const liveReports = useOwnReportsQuery("", null);
-  const liveIncidents = useIncidentsQuery(mode === "live" ? "?limit=100&sort=desc" : "");
-  const sourceReports = mode === "demo" ? demoDisplayReports : liveReports.data?.items.map(toLiveDisplayReport) ?? [];
-  const records = useMemo(
-    () => sourceReports.filter((record) => {
-      const matchesTerm = `${record.title} ${record.address} ${record.reporter}`.toLowerCase().includes(query.toLowerCase());
-      const matchesSeverity = severity === "All severities" || record.severity === severity;
-      const matchesStatus = status === "All statuses" || record.status === status;
-      return matchesTerm && matchesSeverity && matchesStatus;
-    }),
-    [query, severity, sourceReports, status],
-  );
-  const mapRecords = mode === "demo" ? demoMapIncidents.filter((incident) => records.some((record) => record.id === incident.id)) : liveIncidents.data?.items ?? [];
-  const liveNotice = liveReports.isLoading ? "Loading your live reports…" : liveReports.isError ? "Live reports are unavailable. Demo reports are not shown while Live is selected." : "Live mode is active. Only reports from your connected account are shown.";
-
-  return <main className="mx-auto max-w-7xl px-5 py-8">
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <p className="text-xs font-semibold tracking-[.18em] text-blue-400">INCIDENT MANAGEMENT · {mode.toUpperCase()} DATA</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-.04em]">Reports</h1>
-        <p className="mt-2 text-sm text-zinc-500">{mode === "demo" ? `${demoDisplayReports.length} connected demo reports used throughout FloodReady.` : "Reports submitted from your connected live account."}</p>
-      </div>
-      <Link href="/reports/new" className="rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white">+ New report</Link>
-    </div>
-    {mode === "live" ? <p className="mt-5 rounded-xl border border-blue-400/15 bg-blue-500/[.06] px-3 py-2 text-xs text-blue-200">{liveNotice}</p> : null}
-    <section className="mt-5 rounded-2xl border border-white/[.08] bg-white/[.02] p-3">
-      <div className="flex flex-wrap gap-2">
-        <label className="flex min-w-48 flex-1 items-center gap-2 rounded-xl border border-white/[.08] bg-black/20 px-3"><Search className="size-4 text-zinc-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search reports" placeholder="Search reports" className="w-full bg-transparent py-2.5 text-sm outline-none placeholder:text-zinc-600" /></label>
-        <Filter value={severity} onChange={setSeverity} options={["All severities", "CRITICAL", "HIGH", "MODERATE", "LOW", "IMPASSABLE", "SEVERE", "MINOR"]} />
-        <Filter value={status} onChange={setStatus} options={["All statuses", "PENDING", "PENDING_REVIEW", "VERIFIED", "REJECTED", "RESOLVED", "SUBMITTED", "PROVISIONAL", "DISPUTED", "STALE"]} />
-        <div className="flex rounded-xl border border-white/[.08] p-1"><button onClick={() => setView("list")} className={`rounded-lg px-3 py-1.5 text-xs ${view === "list" ? "bg-white text-zinc-950" : "text-zinc-500"}`}>List</button><button onClick={() => setView("map")} className={`rounded-lg px-3 py-1.5 text-xs ${view === "map" ? "bg-white text-zinc-950" : "text-zinc-500"}`}>Map</button></div>
-      </div>
-    </section>
-    {view === "map" ? <section className="relative mt-4 h-[38rem] overflow-hidden rounded-2xl border border-white/[.08]"><MapCanvas viewport={{ latitude: env.NEXT_PUBLIC_DEFAULT_MAP_LATITUDE, longitude: env.NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE, zoom: env.NEXT_PUBLIC_DEFAULT_MAP_ZOOM }} attribution={env.NEXT_PUBLIC_MAP_ATTRIBUTION} styleUrl={env.NEXT_PUBLIC_MAP_STYLE_URL} incidents={mapRecords} layers={mapLayers} selectedIncidentId={selected?.id} onIncidentSelect={(id) => setSelected(records.find((record) => record.id === id) ?? null)} /></section> : <ReportTable records={records} onSelect={setSelected} />}
-    <p className="mt-4 text-xs text-zinc-500">Showing {records.length} {mode === "demo" ? "demo" : "live"} report{records.length === 1 ? "" : "s"}.</p>
-    {selected ? <Detail record={selected} onClose={() => setSelected(null)} /> : null}
-  </main>;
+  const reports = useOwnReportsQuery("", null); const items = reports.data?.items ?? [];
+  return <main className="mx-auto max-w-5xl px-5 py-8"><header className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-semibold tracking-[.18em] text-blue-400">YOUR SUBMISSIONS</p><h1 className="mt-2 text-3xl font-semibold tracking-[-.04em]">Reports</h1><p className="mt-2 text-sm text-zinc-400">Every submitted report remains visible while AI validation runs.</p></div><div className="flex gap-2"><button type="button" onClick={() => void reports.refetch()} disabled={reports.isFetching} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-xs font-semibold disabled:opacity-60"><RefreshCw className={`size-4 ${reports.isFetching ? "animate-spin" : ""}`} />Refresh</button><Link href="/reports/new" className="inline-flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white"><Camera className="size-4" />Submit a report</Link></div></header>{reports.isLoading ? <p role="status" className="mt-6 rounded-2xl border border-white/[.08] bg-white/[.02] p-5 text-sm text-zinc-400">Loading your reports…</p> : null}{reports.isError ? <div role="alert" className="mt-6 rounded-2xl border border-red-400/25 bg-red-500/10 p-5 text-sm text-red-100"><p className="flex items-center gap-2 font-semibold"><AlertTriangle className="size-4" />Could not load your reports</p><button type="button" onClick={() => void reports.refetch()} className="mt-3 rounded-xl border border-red-300/30 px-3 py-2 text-xs font-semibold">Retry</button></div> : null}{!reports.isLoading && !reports.isError && items.length === 0 ? <section className="mt-6 rounded-2xl border border-white/[.08] bg-white/[.02] p-8 text-center"><h2 className="font-semibold">No reports yet</h2><p className="mt-2 text-sm text-zinc-400">Your flood reports will appear here as soon as you submit them.</p><Link href="/reports/new" className="mt-5 inline-flex rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-950">Submit your first report</Link></section> : null}<section className="mt-6 grid gap-3">{items.map((report) => <ReportCard key={report.id} report={report} />)}</section></main>;
 }
 
-function ReportTable({ records, onSelect }: { records: readonly DisplayReport[]; onSelect: (record: DisplayReport) => void }) {
-  return <section className="mt-4 overflow-x-auto rounded-2xl border border-white/[.08]"><table className="w-full min-w-[860px] text-left text-sm"><thead className="bg-white/[.025] text-[10px] uppercase tracking-[.13em] text-zinc-500"><tr>{["Incident", "Location", "Type", "Severity", "Status", "Reporter", "Trust", "Submitted", ""].map((heading) => <th className="px-4 py-3 font-medium" key={heading}>{heading}</th>)}</tr></thead><tbody>{records.map((record) => <tr key={record.id} onClick={() => onSelect(record)} className="cursor-pointer border-t border-white/[.06] hover:bg-white/[.03]"><td className="px-4 py-3"><span className="flex items-center gap-3"><i className={`block size-8 rounded-lg ${record.tone === "red" ? "bg-red-500/25" : record.tone === "orange" ? "bg-orange-400/25" : "bg-amber-400/25"}`} /><span className="font-medium">{record.title}</span></span></td><td className="px-4 py-3 text-zinc-400">{record.address}</td><td className="px-4 py-3 text-zinc-400">{record.category.replaceAll("_", " ")}</td><td className="px-4 py-3"><Badge value={record.severity} /></td><td className="px-4 py-3"><Badge value={record.status} /></td><td className="px-4 py-3 text-zinc-400">{record.reporter}</td><td className="px-4 py-3 text-zinc-400">{record.trustScore ?? "—"}</td><td className="px-4 py-3 text-zinc-500">{new Date(record.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</td><td className="px-4 py-3 text-blue-300">Open</td></tr>)}{records.length === 0 ? <tr><td colSpan={9} className="px-4 py-12 text-center text-zinc-500">No reports match these filters.</td></tr> : null}</tbody></table></section>;
+function ReportCard({ report }: { report: ReportDto }) {
+  const validating = report.aiAnalysis === null || report.aiAnalysis.status === "PROCESSING";
+  return <article className="surface-card rounded-2xl p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div className="flex min-w-0 gap-3"><ReportThumbnail reportId={report.id} /><div><p className="text-xs font-semibold tracking-[.14em] text-blue-300">{label(report.category)}</p><p className="mt-2 max-w-xl text-sm leading-6 text-zinc-300">{report.description}</p></div></div><span className={`rounded-full px-3 py-1 text-xs font-semibold ${validating ? "bg-slate-400/15 text-slate-200" : report.aiAnalysis?.status === "SUCCEEDED" ? "bg-emerald-400/15 text-emerald-200" : "bg-amber-400/15 text-amber-200"}`}>{validating ? "? Validating" : validationText(report)}</span></div><dl className="mt-5 grid gap-3 text-xs sm:grid-cols-4"><div><dt className="text-zinc-500">Your severity</dt><dd className="mt-1 font-semibold text-zinc-100">{label(report.severityClaim)}</dd></div><div><dt className="text-zinc-500">AI assessment</dt><dd className="mt-1 font-semibold text-zinc-100">{aiText(report)}</dd></div><div><dt className="text-zinc-500">Submitted</dt><dd className="mt-1 text-zinc-300">{new Date(report.submittedAt).toLocaleString()}</dd></div><div><dt className="text-zinc-500">Location</dt><dd className="mt-1 font-mono text-zinc-300">{report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</dd></div></dl>{report.aiAnalysis?.status === "SUCCEEDED" && report.aiAnalysis.confidenceScore !== null ? <p className="mt-4 text-xs text-zinc-400">AI confidence: {Math.round(report.aiAnalysis.confidenceScore * 100)}%</p> : null}{!validating && report.aiAnalysis?.status !== "SUCCEEDED" ? <RetryAnalysisButton reportId={report.id} /> : null}<Link href={`/map?report=${report.id}&lat=${report.latitude}&lng=${report.longitude}`} className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-blue-300">View on map <ArrowUpRight className="size-3" /></Link></article>;
 }
 
-function Filter({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: string[] }) { return <select value={value} onChange={(event) => onChange(event.target.value)} className="rounded-xl border border-white/[.08] bg-[#111113] px-3 text-xs">{options.map((option) => <option key={option}>{option}</option>)}</select>; }
-function Badge({ value }: { value: string }) { const color = value === "CRITICAL" || value === "HIGH" || value === "IMPASSABLE" || value === "SEVERE" || value === "PENDING" ? "bg-red-500/15 text-red-300" : value === "MODERATE" ? "bg-amber-400/15 text-amber-200" : "bg-emerald-400/15 text-emerald-300"; return <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${color}`}>{value.toLowerCase().replaceAll("_", " ")}</span>; }
-function Detail({ record, onClose }: { record: DisplayReport; onClose: () => void }) { return <div role="dialog" aria-modal="true" aria-label="Report details" className="fixed inset-0 z-50 grid place-items-center bg-black/65 p-4"><section className="surface-card w-full max-w-xl rounded-2xl p-6"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold tracking-[.16em] text-blue-400">REPORT DETAILS</p><h2 className="mt-2 text-xl font-semibold">{record.title}</h2></div><button aria-label="Close details" onClick={onClose}><X className="size-5 text-zinc-400" /></button></div><p className="mt-4 text-sm leading-6 text-zinc-400">{record.description}</p><div className="mt-5 grid grid-cols-2 gap-3 text-xs"><Info label="Location" value={record.address} /><Info label="Reporter" value={record.trustScore === null ? record.reporter : `${record.reporter} · Trust ${record.trustScore}`} /><Info label="Category" value={record.category.replaceAll("_", " ")} /><Info label="Status" value={record.status} /></div><div className="mt-6 flex gap-3"><Link href={`/map?incident=${record.id}`} className="rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-semibold">Open on map</Link><button onClick={onClose} className="rounded-xl border border-white/10 px-4 py-2.5 text-sm">Close</button></div></section></div>; }
-function Info({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-white/[.06] bg-black/10 p-3"><p className="text-zinc-600">{label}</p><p className="mt-1 text-zinc-300">{value}</p></div>; }
+function RetryAnalysisButton({ reportId }: { reportId: string }) {
+  const queryClient = useQueryClient(); const [retrying, setRetrying] = useState(false); const [error, setError] = useState<string | null>(null);
+  const retry = async () => { const token = authStore.getAccessToken(); if (token === undefined) { setError("Sign in again before retrying AI validation."); return; } setRetrying(true); setError(null); try { await reportsApi.retryAnalysis(reportId, token); await queryClient.invalidateQueries({ queryKey: ["reports"] }); } catch { setError("AI validation could not be restarted. Try again later."); } finally { setRetrying(false); } };
+  return <div className="mt-4"><button type="button" onClick={() => void retry()} disabled={retrying} className="rounded-xl border border-amber-300/30 px-3 py-2 text-xs font-semibold text-amber-100 disabled:opacity-60">{retrying ? "Restarting AI validation…" : "Retry AI validation"}</button>{error !== null ? <p role="alert" className="mt-2 text-xs text-red-200">{error}</p> : null}</div>;
+}
+
+function ReportThumbnail({ reportId }: { reportId: string }) {
+  const image = useReportImageQuery(reportId, true); const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => { if (image.data === undefined) return; const next = URL.createObjectURL(image.data.blob); setUrl(next); return () => URL.revokeObjectURL(next); }, [image.data]);
+  if (url === null) return <div aria-label={image.isError ? "Report image unavailable" : "Loading report image"} className="grid size-16 shrink-0 place-items-center rounded-lg border border-white/[.08] bg-white/[.04] text-[10px] text-zinc-500">{image.isError ? "No image" : "Photo"}</div>;
+  return <img src={url} alt="Submitted flood-report evidence" className="size-16 shrink-0 rounded-lg border border-white/[.08] object-cover" />;
+}

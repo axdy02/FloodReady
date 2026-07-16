@@ -3,7 +3,7 @@ import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = fileURLToPath(new URL("..", import.meta.url))
-const files = ["docker-compose.yml", "docker-compose.dev.yml", ".env.example", ".gitignore", "backend/Dockerfile", "frontend/Dockerfile", "ai-service/Dockerfile", "scripts/acceptance.mjs", "scripts/verify-compose.mjs"]
+const files = ["docker-compose.yml", "docker-compose.dev.yml", ".env.example", ".gitignore", "backend/Dockerfile", "frontend/Dockerfile", "ai-service/Dockerfile", "scripts/acceptance.mjs", "scripts/verify-compose.mjs", "scripts/milestone2-preflight.mjs"]
 const forbidden = ["con" + "sole.", "shell: true", "TO" + "DO", "re" + "place_", "password=example"]
 
 const main = async () => {

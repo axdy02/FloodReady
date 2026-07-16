@@ -38,6 +38,19 @@ const requireSuccess = async (command, args, options = {}) => {
 
 const runNpm = async (argumentsForNpm, environment) => requireSuccess(process.execPath, [npmCli, ...argumentsForNpm], { env: environment });
 
+const runNpmWithRetry = async (argumentsForNpm, environment, attempts = 3) => {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const result = await run(process.execPath, [npmCli, ...argumentsForNpm], { env: environment });
+    if (result.code === 0) {
+      return;
+    }
+    if (attempt < attempts) {
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+    }
+  }
+  throw new Error(`Required isolated test command failed: ${process.execPath}`);
+};
+
 const testEnvironment = (databaseUrl) => ({
   ...process.env,
   NODE_ENV: "test",
@@ -48,6 +61,9 @@ const testEnvironment = (databaseUrl) => ({
   DB_CONNECTION_TIMEOUT_MS: "2000",
   DB_IDLE_TIMEOUT_MS: "10000",
   DB_QUERY_TIMEOUT_MS: "5000",
+  AI_SERVICE_BASE_URL: "http://127.0.0.1:39999",
+  AI_SERVICE_TOKEN: randomBytes(32).toString("base64url"),
+  AI_SERVICE_TIMEOUT_MS: "1000",
   ACCESS_TOKEN_SECRET: randomBytes(64).toString("base64url"),
   REFRESH_TOKEN_SECRET: randomBytes(64).toString("base64url"),
   ACCESS_TOKEN_TTL: "15m",
@@ -136,6 +152,7 @@ const main = async () => {
   ]);
   containerStarted = true;
   await waitForDatabase();
+  await new Promise((resolve) => setTimeout(resolve, 1_000));
   const published = await requireSuccess("docker", ["port", containerName, "5432/tcp"], { stdio: "pipe" });
   const port = parsePublishedPort(published);
   const databaseUrl = `postgresql://${databaseUser}:${encodeURIComponent(databasePassword)}@127.0.0.1:${port}/${databaseName}`;
@@ -145,7 +162,7 @@ const main = async () => {
     throw new Error("Unsafe test database configuration");
   }
   await runNpm(["run", "prisma:generate"], environment);
-  await runNpm(["run", "prisma:migrate:deploy"], environment);
+  await runNpmWithRetry(["run", "prisma:migrate:deploy"], environment);
   const argumentsAfterRunner = process.argv.slice(2);
   const watchIndex = argumentsAfterRunner.indexOf("--watch");
   const testArguments = argumentsAfterRunner.filter((argument) => argument !== "--watch");

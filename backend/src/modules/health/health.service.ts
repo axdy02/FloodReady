@@ -3,7 +3,7 @@ import { access, chmod, mkdir } from "node:fs/promises";
 import { config } from "../../config/index.js";
 import { AppError } from "../../shared/errors/index.js";
 import { probeDatabase } from "./health.repository.js";
-import type { HealthData } from "./health.types.js";
+import type { HealthData, ServiceCheckStatus, ServicesHealthData } from "./health.types.js";
 
 const data = (status: "ok" | "ready"): HealthData => ({ status, service: "floodready-backend", timestamp: new Date().toISOString() });
 
@@ -27,6 +27,31 @@ export const readiness = async (): Promise<HealthData> => {
     throw new AppError(503, "SERVICE_UNAVAILABLE", "Service unavailable");
   }
 };
+
+const checkAiService = async (): Promise<ServiceCheckStatus> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2_500);
+  try {
+    const response = await fetch(`${config.AI_SERVICE_BASE_URL}/health/ready`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!response.ok) return "unavailable";
+    const body = await response.json() as { success?: boolean; data?: { status?: string; provider?: string } };
+    if (body.success !== true || body.data?.status !== "ready") return "degraded";
+    return body.data.provider === "degraded" ? "degraded" : "ready";
+  } catch {
+    return "unavailable";
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+export const servicesReadiness = async (): Promise<ServicesHealthData> => ({
+  backend: "ready",
+  aiService: await checkAiService(),
+  checkedAt: new Date().toISOString(),
+});
 
 export const initializeRuntimeDependencies = async (): Promise<void> => {
   await initializeUploadDirectory();

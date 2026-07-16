@@ -42,6 +42,16 @@ reportsRouter.use((_request, response, next) => {
 })
 
 reportsRouter.post(
+  "/analyze",
+  reportIpRateLimit,
+  requireMultipartContentType,
+  authenticate,
+  userRateLimit,
+  acquireCapacity,
+  parseMultipart,
+  controller.analyze,
+)
+reportsRouter.post(
   "/",
   reportIpRateLimit,
   requireMultipartContentType,
@@ -54,7 +64,9 @@ reportsRouter.post(
 reportsRouter.get("/", authenticate, requireRoles("MODERATOR", "ADMIN"), controller.list)
 reportsRouter.get("/map", authenticate, reportMapRateLimit, controller.listMap)
 reportsRouter.get("/:reportId/image", authenticate, controller.getImage)
+reportsRouter.post("/:reportId/retry-ai", reportIpRateLimit, authenticate, userRateLimit, controller.retryAnalysis)
 reportsRouter.get("/:reportId", authenticate, controller.get)
+reportsRouter.post("/:reportId/submit", requireJsonContentType, parseJsonBody, authenticate, controller.submitDraft)
 reportsRouter.patch("/:reportId", requireJsonContentType, parseJsonBody, authenticate, controller.updateOwned)
 reportsRouter.patch(
   "/:reportId/status",

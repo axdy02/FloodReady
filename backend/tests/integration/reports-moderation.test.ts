@@ -38,12 +38,7 @@ describe("report moderation", () => {
     const reportId = responseId(created)
     const moderator = await signInTestUser("MODERATOR")
 
-    const pending = await api()
-      .patch(`/api/v1/reports/${reportId}/status`)
-      .set("Authorization", bearer(moderator.accessToken))
-      .send({ status: "PENDING_REVIEW" })
-    expect(pending.status).toBe(200)
-    expect(pending.body.data.verificationStatus).toBe("PENDING_REVIEW")
+    expect(created.body.data.verificationStatus).toBe("PENDING_REVIEW")
 
     const disputed = await api()
       .patch(`/api/v1/reports/${reportId}/status`)

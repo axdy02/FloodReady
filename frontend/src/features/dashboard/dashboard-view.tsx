@@ -1,27 +1,57 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, ArrowUpRight, MapPinned, ShieldCheck, TriangleAlert, Users } from "lucide-react";
-import { useAppMode } from "@/features/app-mode/app-mode-context";
-import { demoAverageConfidence, demoContributors, demoDisplayReports, demoMapIncidents } from "@/features/app-mode/mode-data";
-import { useDashboardQueries } from "@/features/dashboard/queries";
-import { demoPreviewRoadPaths } from "@/features/map/demo-preview-incidents";
-import { MapCanvas, type MapLayerState } from "@/features/map/map-canvas";
+import { CheckCircle2, Clock3, MapPinned, PlusCircle } from "lucide-react";
+import { BlurText } from "@/components/motion/blur-text";
+import { Counter } from "@/components/motion/counter";
+import { Reveal } from "@/components/motion/reveal";
+import { type MapLayerState, MapCanvas } from "@/features/map/map-canvas";
+import { useReportMapQuery } from "@/features/map/queries";
+import { useOwnReportsQuery } from "@/features/reports/queries";
 import { loadClientEnvironment } from "@/lib/env/client";
 
-const mapLayers: MapLayerState = { roads: true, markers: true, heatmap: false, shelters: false, weather: false, traffic: false };
+const layers: MapLayerState = { roads: false, markers: true, heatmap: false, shelters: false, weather: false, traffic: false };
 
 export function DashboardView() {
   const env = loadClientEnvironment();
-  const { mode } = useAppMode();
-  const { reports, incidents } = useDashboardQueries();
-  const demo = mode === "demo";
-  const active = demo ? demoMapIncidents.length : incidents.data?.totalCount ?? 0;
-  const submitted = demo ? demoDisplayReports.length : reports.data?.totalCount ?? 0;
-  const contributors = demo ? String(demoContributors) : reports.isLoading ? "…" : "—";
-  const mapData = demo ? demoMapIncidents : incidents.data?.items ?? [];
-  return <main className="mx-auto max-w-7xl px-5 py-8"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-semibold tracking-[.18em] text-blue-400">OVERVIEW · {demo ? "DEMO DATA" : "LIVE DATA"}</p><h1 className="mt-2 text-3xl font-semibold">City pulse</h1><p className="mt-2 text-sm text-zinc-500">{demo ? `${demoDisplayReports.length} connected demo reports around Gurugram.` : "Current reports from the live service."}</p></div><div className="flex gap-2"><Link href="/reports/new" className="rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white">Report flooding</Link><Link href="/map" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold">View live map</Link></div></div><section className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric icon={<TriangleAlert />} value={String(active)} label="Active incidents" tone="text-red-400" /><Metric icon={<Activity />} value={String(submitted)} label="Reports this week" tone="text-amber-300" /><Metric icon={<ShieldCheck />} value={demo ? `${demoAverageConfidence}%` : "—"} label="AI confidence" tone="text-emerald-400" /><Metric icon={<Users />} value={contributors} label="People contributing" tone="text-blue-400" /></section><section className="relative mt-3 h-[28rem] overflow-hidden rounded-2xl border border-white/[.08]"><div className="absolute left-5 top-5 z-10 rounded-xl border border-white/10 bg-[#111113]/90 px-4 py-3 backdrop-blur"><p className="text-sm font-semibold">Flood map</p><p className="mt-1 text-xs text-zinc-500">{demo ? `${demoMapIncidents.length} demo incidents` : `${active} live incidents`}</p></div><MapCanvas viewport={{ latitude: env.NEXT_PUBLIC_DEFAULT_MAP_LATITUDE, longitude: env.NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE, zoom: env.NEXT_PUBLIC_DEFAULT_MAP_ZOOM }} attribution={env.NEXT_PUBLIC_MAP_ATTRIBUTION} styleUrl={env.NEXT_PUBLIC_MAP_STYLE_URL} incidents={mapData} roadPaths={demo ? demoPreviewRoadPaths : {}} layers={mapLayers} /></section><section className="mt-3 grid gap-3 lg:grid-cols-2"><Feed title="Recent reports" rows={demo ? demoDisplayReports.map((report) => report.title) : reports.data?.items.slice(0, 3).map((report) => report.category.replaceAll("_", " ")) ?? []} /><article className="surface-card rounded-2xl p-5"><p className="flex items-center gap-2 text-sm font-semibold"><MapPinned className="size-4 text-blue-400" />AI insight</p><p className="mt-5 text-sm leading-6 text-zinc-400">{demo ? "Sohna Road has the highest verified severity in the current demo set." : "Live insights appear when reports have been verified."}</p><Link href="/map" className="mt-5 inline-flex items-center gap-1 text-xs font-semibold text-blue-300">Open map <ArrowUpRight className="size-3" /></Link></article></section></main>;
+  const ownReports = useOwnReportsQuery("", null);
+  const mapReports = useReportMapQuery(`?west=${(env.NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE - 0.45).toFixed(6)}&south=${(env.NEXT_PUBLIC_DEFAULT_MAP_LATITUDE - 0.45).toFixed(6)}&east=${(env.NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE + 0.45).toFixed(6)}&north=${(env.NEXT_PUBLIC_DEFAULT_MAP_LATITUDE + 0.45).toFixed(6)}&limit=100&sort=desc`);
+  const submitted = ownReports.data?.items ?? [];
+  const validating = submitted.filter((report) => report.aiAnalysis === null || report.aiAnalysis.status === "PROCESSING").length;
+  const completed = submitted.filter((report) => report.aiAnalysis?.status === "SUCCEEDED").length;
+
+  return <main className="mx-auto max-w-7xl px-5 py-8">
+    <header className="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p className="text-xs font-semibold tracking-[.18em] text-blue-400">LIVE OVERVIEW</p>
+        <BlurText as="h1" text="FloodReady dashboard" delay={105} className="mt-2 text-3xl font-semibold" />
+        <p className="mt-2 text-sm text-zinc-400">Current information from your submitted reports and the shared reports map.</p>
+      </div>
+      <Link href="/reports/new" className="inline-flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white"><PlusCircle className="size-4" />Submit a report</Link>
+    </header>
+
+    <section className="mt-7 grid gap-3 sm:grid-cols-3">
+      <Metric icon={<Clock3 />} value={validating} label="Reports validating" delay={0} />
+      <Metric icon={<CheckCircle2 />} value={completed} label="AI validation complete" delay={0.08} />
+      <Metric icon={<MapPinned />} value={mapReports.data?.totalCount ?? 0} label="Reports on the map" delay={0.16} />
+    </section>
+
+    <Reveal className="mt-4" delay={0.08}>
+      <section className="relative h-[28rem] overflow-hidden rounded-2xl border border-white/[.08]">
+        <div className="absolute left-5 top-5 z-10 rounded-xl border border-white/10 bg-[#111113]/90 px-4 py-3 backdrop-blur"><p className="text-sm font-semibold">Reports map</p><p className="mt-1 text-xs text-zinc-400">{mapReports.isLoading ? "Loading current reports…" : `${mapReports.data?.totalCount ?? 0} reports in this area`}</p></div>
+        <MapCanvas viewport={{ latitude: env.NEXT_PUBLIC_DEFAULT_MAP_LATITUDE, longitude: env.NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE, zoom: env.NEXT_PUBLIC_DEFAULT_MAP_ZOOM }} attribution={env.NEXT_PUBLIC_MAP_ATTRIBUTION} styleUrl={env.NEXT_PUBLIC_MAP_STYLE_URL} incidents={mapReports.data?.items ?? []} layers={layers} />
+      </section>
+    </Reveal>
+
+    <Reveal className="mt-4" delay={0.12}>
+      <section className="rounded-2xl border border-white/[.08] bg-white/[.02] p-5">
+        <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-semibold">Recent reports</h2><Link href="/reports" className="text-xs font-semibold text-blue-300">View all</Link></div>
+        {ownReports.isLoading ? <p className="mt-4 text-sm text-zinc-400">Loading your reports…</p> : submitted.length === 0 ? <p className="mt-4 text-sm text-zinc-400">You have not submitted a report yet.</p> : <div className="mt-4 divide-y divide-white/[.06]">{submitted.slice(0, 3).map((report) => <Link href={`/map?report=${report.id}&lat=${report.latitude}&lng=${report.longitude}`} key={report.id} className="flex items-center justify-between gap-4 py-3 text-sm hover:text-blue-200"><span className="font-medium">{report.category.replaceAll("_", " ")}</span><span className="text-xs text-zinc-400">{report.aiAnalysis === null || report.aiAnalysis.status === "PROCESSING" ? "Validating…" : report.aiAnalysis.status === "SUCCEEDED" ? "Validated" : "Manual review"}</span></Link>)}</div>}
+      </section>
+    </Reveal>
+  </main>;
 }
 
-function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: string }) { return <article className="surface-card rounded-2xl p-5"><span className={tone}>{icon}</span><p className="mt-5 text-3xl font-semibold">{value}</p><p className="mt-1 text-xs text-zinc-500">{label}</p></article>; }
-function Feed({ title, rows }: { title: string; rows: string[] }) { return <article className="surface-card rounded-2xl p-5"><p className="text-sm font-semibold">{title}</p><div className="mt-4 divide-y divide-white/[.06]">{rows.length ? rows.map((row) => <p key={row} className="py-3 text-xs text-zinc-400">{row}</p>) : <p className="py-5 text-xs text-zinc-500">No live reports yet.</p>}</div></article>; }
+function Metric({ icon, value, label, delay }: { icon: React.ReactNode; value: number; label: string; delay: number }) {
+  return <Reveal delay={delay}><article className="surface-card rounded-2xl p-5"><span className="text-blue-400">{icon}</span><p className="mt-5 flex h-9 items-center text-3xl font-semibold"><Counter value={value} fontSize={36} /></p><p className="mt-1 text-xs text-zinc-400">{label}</p></article></Reveal>;
+}

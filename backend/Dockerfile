@@ -34,9 +34,10 @@ FROM runtime-base AS migration
 COPY package.json package-lock.json ./
 COPY prisma.config.ts ./
 COPY --from=dependencies /app/node_modules ./node_modules
+COPY scripts/migrate-with-retry.mjs ./scripts/migrate-with-retry.mjs
 COPY prisma ./prisma
 USER 10001:10001
-CMD ["npm", "run", "prisma:migrate:deploy"]
+CMD ["node", "scripts/migrate-with-retry.mjs"]
 
 FROM runtime-base AS demo-seed
 COPY --from=production-dependencies /app/node_modules ./node_modules

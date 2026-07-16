@@ -30,6 +30,7 @@ describe("app foundation", () => {
   it("fails configuration validation before an app can be built", async () => {
     const environment = configurationEnvironment();
     delete environment.DATABASE_URL;
+    environment.DOTENV_CONFIG_PATH = ".missing-test-environment";
 
     await expect(childExitCode(environment)).resolves.not.toBe(0);
   });

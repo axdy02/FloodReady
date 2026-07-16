@@ -66,9 +66,6 @@ export const startServer = async (): Promise<Server> => {
 };
 
 void startServer().catch(async (error: unknown) => {
-  console.error("\n--- FULL STARTUP ERROR ---");
-  console.error(error);
-  console.error("--------------------------\n");
   logger.fatal({ errorType: error instanceof Error ? error.name : "StartupFailure" }, "startup failed");
   await prisma.$disconnect();
   process.exitCode = 1;

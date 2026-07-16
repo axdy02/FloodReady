@@ -8,6 +8,7 @@ import {
   verificationStatuses,
   type CreateReportMetadata,
   type ReportListQuery,
+  type SubmitReportInput,
   type UpdateReportInput,
 } from "./reports.types.js"
 
@@ -44,14 +45,16 @@ const optionalEnum = <T extends readonly [string, ...string[]]>(values: T) =>
 const description = z
   .string()
   .transform((value) => value.trim())
-  .refine((value) => value.length <= 1000, "Invalid value")
-  .transform((value) => value === "" ? null : value)
+  .refine((value) => {
+    const length = Array.from(value).length
+    return length >= 10 && length <= 1000
+  }, "Invalid value")
 
 const multipartMetadataSchema = z
   .object({
     capturedAt: isoTimestamp,
     category: z.enum(reportCategories),
-    description: description.optional().transform((value) => value ?? null),
+    description,
     gpsAccuracy: decimalString(accuracyPattern, Number.MIN_VALUE, 100000).optional(),
     latitude: decimalString(latitudePattern, -90, 90),
     locationSource: z.enum(locationSources).optional().default("DEVICE_GPS"),
@@ -107,10 +110,15 @@ const reportListSchema = z
 
 export const reportIdParamsSchema = z.object({ reportId: z.uuid() }).strict()
 
+export const submitReportSchema = z
+  .object({ finalSeverity: z.enum(severities) })
+  .strict()
+  .transform((value): SubmitReportInput => value)
+
 export const updateReportSchema = z
   .object({
     category: z.enum(reportCategories).optional(),
-    description: description.nullable().optional(),
+    description: description.optional(),
     severityClaim: z.enum(severities).optional(),
   })
   .strict()

@@ -2,12 +2,15 @@ import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const npmCli = process.platform === "win32"
   ? resolve(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js")
   : resolve(dirname(process.execPath), "..", "lib", "node_modules", "npm", "bin", "npm-cli.js");
-const acceptanceDirectory = ".acceptance";
+const projectDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const acceptanceDirectory = join(projectDirectory, ".acceptance");
 const environmentFile = join(acceptanceDirectory, "compose.env");
+const composeFile = join(projectDirectory, "docker-compose.yml");
 const project = `floodready-acceptance-${process.pid}`;
 const verifyOnly = process.argv.includes("--verify");
 let composeLaunched = false;
@@ -42,6 +45,9 @@ const createEnvironment = () => {
     DB_CONNECTION_TIMEOUT_MS: "2000",
     DB_IDLE_TIMEOUT_MS: "10000",
     DB_QUERY_TIMEOUT_MS: "5000",
+    AI_SERVICE_BASE_URL: "http://127.0.0.1:8000",
+    AI_SERVICE_TOKEN: randomBytes(32).toString("base64url"),
+    AI_SERVICE_TIMEOUT_MS: "1000",
     ACCESS_TOKEN_SECRET: randomBytes(64).toString("base64url"),
     REFRESH_TOKEN_SECRET: randomBytes(64).toString("base64url"),
     ACCESS_TOKEN_TTL: "15m",
@@ -76,7 +82,7 @@ const createEnvironment = () => {
 
 const serializeEnvironment = (environment) => Object.entries(environment).map(([key, value]) => `${key}=${value}`).join("\n");
 
-const composeArguments = (...argumentsForCompose) => ["compose", "--project-name", project, "--env-file", environmentFile, ...argumentsForCompose];
+const composeArguments = (...argumentsForCompose) => ["compose", "--project-name", project, "--file", composeFile, "--env-file", environmentFile, ...argumentsForCompose];
 
 const cleanup = async (environment) => {
   if (cleanupStarted) {
@@ -106,8 +112,16 @@ const main = async () => {
       await requireSuccess("docker", composeArguments("config"), environment);
       await requireSuccess("docker", composeArguments("build", "--no-cache"), environment);
       composeLaunched = true;
-      await requireSuccess("docker", composeArguments("up", "--detach"), environment);
-      await requireSuccess(process.execPath, ["scripts/verify-compose.mjs", project, environmentFile], environment);
+      const composeUp = await run("docker", composeArguments("up", "--detach"), environment);
+      if (composeUp !== 0) {
+        await run("docker", composeArguments("logs", "--no-color", "migrate", "backend"), environment);
+        throw new Error("Required acceptance command failed: docker");
+      }
+      const composeVerification = await run(process.execPath, ["scripts/verify-compose.mjs", project, environmentFile], environment);
+      if (composeVerification !== 0) {
+        await run("docker", composeArguments("logs", "--no-color", "migrate", "backend"), environment);
+        throw new Error("Required acceptance command failed: Compose verification");
+      }
     }
   } finally {
     await cleanup(environment);

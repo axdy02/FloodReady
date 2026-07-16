@@ -41,6 +41,14 @@ const base64UrlSecret = z.string().regex(/^[A-Za-z0-9_-]+$/u).refine((value) => 
     && !secretPlaceholderPattern.test(value);
 }, "Invalid secret");
 
+const serviceToken = z.string().regex(/^[A-Za-z0-9_-]+$/u).refine((value) => {
+  const bytes = Buffer.from(value, "base64url");
+  return bytes.length >= 32
+    && bytes.toString("base64url") === value
+    && !bytes.every((byte) => byte === bytes[0])
+    && !secretPlaceholderPattern.test(value);
+}, "Invalid service token");
+
 const databaseUrl = z.string().url().refine((value) => isPostgresUrl(value), "Invalid PostgreSQL URL");
 
 const urlList = z.string().transform((value, context) => {
@@ -66,6 +74,9 @@ const schema = z.object({
   DB_CONNECTION_TIMEOUT_MS: z.coerce.number().int().min(500).max(10_000),
   DB_IDLE_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000),
   DB_QUERY_TIMEOUT_MS: z.coerce.number().int().min(500).max(30_000),
+  AI_SERVICE_BASE_URL: z.string().refine((value) => isExactOrigin(value), "Invalid AI service origin"),
+  AI_SERVICE_TOKEN: serviceToken,
+  AI_SERVICE_TIMEOUT_MS: z.coerce.number().int().min(500).max(30_000),
   ACCESS_TOKEN_SECRET: base64UrlSecret,
   REFRESH_TOKEN_SECRET: base64UrlSecret,
   ACCESS_TOKEN_TTL: z.string().regex(durationPattern),
@@ -101,10 +112,14 @@ const schema = z.object({
   const refreshDuration = parseDuration(value.REFRESH_TOKEN_TTL);
   const accessSecret = Buffer.from(value.ACCESS_TOKEN_SECRET, "base64url");
   const refreshSecret = Buffer.from(value.REFRESH_TOKEN_SECRET, "base64url");
+  const aiServiceToken = Buffer.from(value.AI_SERVICE_TOKEN, "base64url");
   const publicOrigin = new URL(value.PUBLIC_API_ORIGIN);
 
   if (accessSecret.equals(refreshSecret)) {
     context.addIssue({ code: "custom", path: ["REFRESH_TOKEN_SECRET"], message: "Token secrets must differ" });
+  }
+  if (aiServiceToken.equals(accessSecret) || aiServiceToken.equals(refreshSecret)) {
+    context.addIssue({ code: "custom", path: ["AI_SERVICE_TOKEN"], message: "Service token must differ from JWT secrets" });
   }
   if (accessDuration === null || accessDuration < 300_000 || accessDuration > 1_800_000) {
     context.addIssue({ code: "custom", path: ["ACCESS_TOKEN_TTL"], message: "Access token TTL must be 5 to 30 minutes" });

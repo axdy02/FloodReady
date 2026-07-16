@@ -56,6 +56,37 @@ enum LocationSource {
   MANUAL
 }
 
+enum AiAnalysisStatus {
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  TIMED_OUT
+}
+
+enum WaterLevelCategory {
+  NONE
+  ANKLE_LEVEL
+  KNEE_LEVEL
+  WAIST_LEVEL
+  ABOVE_WAIST
+  UNKNOWN
+}
+
+enum RoadPassability {
+  PASSABLE
+  CAUTION
+  UNSAFE
+  IMPASSABLE
+  UNKNOWN
+}
+
+enum ImageQuality {
+  GOOD
+  FAIR
+  POOR
+  UNUSABLE
+}
+
 model User {
   id                        String           @id @default(uuid()) @db.Uuid
   name                      String           @db.VarChar(100)
@@ -70,6 +101,7 @@ model User {
   updatedAt                 DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
   sessions                  RefreshSession[]
   reports                   FloodReport[]
+  reportDrafts              ReportDraft[]
   audits                    AuditLog[]
 
   @@index([role, isActive])
@@ -102,8 +134,10 @@ model FloodReport {
   id                 String             @id @default(uuid()) @db.Uuid
   reporterId         String             @map("reporter_id") @db.Uuid
   category           ReportCategory
-  description        String?            @db.VarChar(1000)
+  description        String             @db.VarChar(1000)
   severityClaim      Severity           @default(UNKNOWN) @map("severity_claim")
+  finalSeverity      Severity           @default(UNKNOWN) @map("final_severity")
+  aiUsed             Boolean            @default(false) @map("ai_used")
   latitude           Decimal            @db.Decimal(9, 6)
   longitude          Decimal            @db.Decimal(9, 6)
   gpsAccuracy        Decimal?           @map("gps_accuracy") @db.Decimal(10, 2)
@@ -111,6 +145,9 @@ model FloodReport {
   capturedAt         DateTime           @map("captured_at") @db.Timestamptz(3)
   submittedAt        DateTime           @default(now()) @map("submitted_at") @db.Timestamptz(3)
   imagePath          String             @map("image_path") @db.VarChar(255)
+  imageMime          String?            @map("image_mime") @db.VarChar(32)
+  imageSize          Int?               @map("image_size")
+  imageSha256        String?            @map("image_sha256") @db.Char(64)
   uploadSource       String             @default("WEB") @map("upload_source") @db.VarChar(16)
   verificationStatus VerificationStatus @default(SUBMITTED) @map("verification_status")
   incidentId         String?            @map("incident_id") @db.Uuid
@@ -119,14 +156,77 @@ model FloodReport {
   updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   reporter           User               @relation(fields: [reporterId], references: [id], onDelete: Restrict)
   incident           Incident?          @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  aiAnalysis         AiAnalysis?        @relation("ReportAnalysis")
 
   @@index([reporterId, submittedAt, id])
   @@index([verificationStatus, submittedAt, id])
   @@index([category])
   @@index([severityClaim])
+  @@index([finalSeverity])
   @@index([incidentId])
   @@index([location(ops: raw("gist_geography_ops"))], type: Gist, map: "flood_reports_location_gist_idx")
   @@map("flood_reports")
+}
+
+model ReportDraft {
+  id             String         @id @db.Uuid
+  reporterId     String         @map("reporter_id") @db.Uuid
+  category       ReportCategory
+  description    String         @db.VarChar(1000)
+  severityClaim  Severity       @default(UNKNOWN) @map("severity_claim")
+  latitude       Decimal        @db.Decimal(9, 6)
+  longitude      Decimal        @db.Decimal(9, 6)
+  gpsAccuracy    Decimal?       @map("gps_accuracy") @db.Decimal(10, 2)
+  locationSource LocationSource @default(DEVICE_GPS) @map("location_source")
+  capturedAt     DateTime       @map("captured_at") @db.Timestamptz(3)
+  imagePath      String         @map("image_path") @db.VarChar(255)
+  imageMime      String         @map("image_mime") @db.VarChar(32)
+  imageSize      Int            @map("image_size")
+  imageSha256    String         @map("image_sha256") @db.Char(64)
+  expiresAt      DateTime       @map("expires_at") @db.Timestamptz(3)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  reporter       User           @relation(fields: [reporterId], references: [id], onDelete: Restrict)
+  aiAnalysis     AiAnalysis?    @relation("DraftAnalysis")
+
+  @@index([reporterId, createdAt, id])
+  @@index([expiresAt])
+  @@map("report_drafts")
+}
+
+model AiAnalysis {
+  id                 String              @id @default(uuid()) @db.Uuid
+  draftId            String?             @unique @map("draft_id") @db.Uuid
+  reportId           String?             @unique @map("report_id") @db.Uuid
+  status             AiAnalysisStatus
+  floodDetected      Boolean?            @map("flood_detected")
+  suggestedSeverity  Severity?           @map("suggested_severity")
+  confidenceScore    Decimal?            @map("confidence_score") @db.Decimal(5, 4)
+  validationScore    Decimal?            @map("validation_score") @db.Decimal(5, 4)
+  validationOutcome  String?             @map("validation_outcome") @db.VarChar(32)
+  weatherSummary     String?             @map("weather_summary") @db.VarChar(500)
+  weatherPrecipitationMm Decimal?        @map("weather_precipitation_mm") @db.Decimal(8, 2)
+  weatherTemperatureC Decimal?           @map("weather_temperature_c") @db.Decimal(5, 2)
+  weatherScore       Decimal?            @map("weather_score") @db.Decimal(5, 4)
+  waterLevelCategory WaterLevelCategory? @map("water_level_category")
+  roadPassability    RoadPassability?    @map("road_passability")
+  imageQuality       ImageQuality?       @map("image_quality")
+  summary            String?             @db.VarChar(500)
+  evidenceFlags      Json                @default("[]") @map("evidence_flags")
+  needsHumanReview   Boolean?            @map("needs_human_review")
+  modelName          String?             @map("model_name") @db.VarChar(100)
+  modelVersion       String?             @map("model_version") @db.VarChar(100)
+  processingTimeMs   Int?                @map("processing_time_ms")
+  errorCode          String?             @map("error_code") @db.VarChar(64)
+  startedAt          DateTime            @default(now()) @map("started_at") @db.Timestamptz(3)
+  completedAt        DateTime?           @map("completed_at") @db.Timestamptz(3)
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  draft              ReportDraft?        @relation("DraftAnalysis", fields: [draftId], references: [id], onDelete: Cascade)
+  report             FloodReport?        @relation("ReportAnalysis", fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@map("ai_analyses")
 }
 
 model Incident {

@@ -28,6 +28,7 @@ async function delay(ms: number, signal: AbortSignal): Promise<void> {
 
 async function oneAttempt<T extends z.ZodType>(options: RequestOptions<T>, url: string, id: string): Promise<z.infer<T>> {
   const controller = new AbortController();
+  let responseStatus: number | null = null;
   const timer = setTimeout(() => controller.abort(), timeoutMs[options.timeoutClass ?? options.mode ?? "normal"]);
   const abort = () => controller.abort();
   options.signal?.addEventListener("abort", abort, { once: true });
@@ -38,6 +39,7 @@ async function oneAttempt<T extends z.ZodType>(options: RequestOptions<T>, url: 
     const init: RequestInit = { method: options.method, headers, credentials: "include", signal: controller.signal };
     if (options.body !== undefined) init.body = options.body;
     const response = await fetch(url, init);
+    responseStatus = response.status;
     if (options.responseMode === "protectedReportImage") {
       if (options.method !== "GET" || !uuidPath.test(options.path) || options.accessToken === undefined) throw new ApiError("VALIDATION_ERROR", "Invalid image request", response.status);
       if (!response.ok) throw await parseError(response);
@@ -57,6 +59,7 @@ async function oneAttempt<T extends z.ZodType>(options: RequestOptions<T>, url: 
     if (options.signal?.aborted) throw new RequestCancelledError();
     if (error instanceof DOMException && error.name === "AbortError") throw new ApiError("TIMEOUT", "Request timed out", null);
     if (error instanceof ApiError) throw error;
+    if (error instanceof z.ZodError) throw new ApiError("INVALID_RESPONSE", "The server response could not be verified", responseStatus);
     throw new ApiError("NETWORK_ERROR", "Network request failed", null);
   } finally {
     clearTimeout(timer);

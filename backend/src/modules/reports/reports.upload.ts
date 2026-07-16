@@ -22,10 +22,10 @@ export function createMultipartParser(maxBytes: number): RequestHandler {
     limits: {
       fieldNameSize: 64,
       fieldSize: 4 * 1024,
-      fields: 7,
+      fields: 8,
       fileSize: maxBytes,
       files: 1,
-      parts: 9,
+      parts: 10,
     },
     storage: multer.memoryStorage(),
   }).single("image")

@@ -1,6 +1,7 @@
 import { Prisma } from "../../generated/prisma/client.js"
 import { prisma } from "../../database/prisma.js"
 import type {
+  AiAnalysisRecord,
   CreateReportMetadata,
   ReportRecord,
   ReportRepositoryListInput,
@@ -10,6 +11,9 @@ import type {
 
 interface CreateReportRowInput extends CreateReportMetadata {
   imagePath: string
+  imageMime: "image/jpeg" | "image/png" | "image/webp"
+  imageSha256: string
+  imageSize: number
   reporterId: string
 }
 
@@ -22,6 +26,8 @@ interface AuditInput {
 }
 
 const reportSelect = {
+  aiAnalysis: true,
+  aiUsed: true,
   capturedAt: true,
   category: true,
   createdAt: true,
@@ -34,6 +40,7 @@ const reportSelect = {
   longitude: true,
   reporterId: true,
   severityClaim: true,
+  finalSeverity: true,
   submittedAt: true,
   updatedAt: true,
   uploadSource: true,
@@ -48,6 +55,8 @@ const reportColumns = Prisma.sql`
   r."category",
   r."description",
   r."severity_claim" AS "severityClaim",
+  r."final_severity" AS "finalSeverity",
+  r."ai_used" AS "aiUsed",
   r."latitude"::double precision AS "latitude",
   r."longitude"::double precision AS "longitude",
   r."gps_accuracy"::double precision AS "gpsAccuracy",
@@ -75,6 +84,41 @@ function mapSelectedReport(report: SelectedReport): ReportRecord {
     gpsAccuracy: report.gpsAccuracy === null ? null : decimalToNumber(report.gpsAccuracy),
     latitude: decimalToNumber(report.latitude),
     longitude: decimalToNumber(report.longitude),
+    aiAnalysis: report.aiAnalysis === null ? null : mapAiAnalysis(report.aiAnalysis),
+  }
+}
+
+function mapAiAnalysis(analysis: NonNullable<SelectedReport["aiAnalysis"]>): AiAnalysisRecord {
+  const flags = Array.isArray(analysis.evidenceFlags) && analysis.evidenceFlags.every((flag) => typeof flag === "string")
+    ? analysis.evidenceFlags
+    : []
+  return {
+    id: analysis.id,
+    draftId: analysis.draftId,
+    reportId: analysis.reportId,
+    status: analysis.status,
+    floodDetected: analysis.floodDetected,
+    suggestedSeverity: analysis.suggestedSeverity,
+    confidenceScore: analysis.confidenceScore === null ? null : decimalToNumber(analysis.confidenceScore),
+    validationScore: analysis.validationScore === null ? null : decimalToNumber(analysis.validationScore),
+    validationOutcome: analysis.validationOutcome as AiAnalysisRecord["validationOutcome"],
+    weatherSummary: analysis.weatherSummary,
+    weatherPrecipitationMm: analysis.weatherPrecipitationMm === null ? null : decimalToNumber(analysis.weatherPrecipitationMm),
+    weatherTemperatureC: analysis.weatherTemperatureC === null ? null : decimalToNumber(analysis.weatherTemperatureC),
+    waterLevelCategory: analysis.waterLevelCategory,
+    roadPassability: analysis.roadPassability,
+    imageQuality: analysis.imageQuality,
+    summary: analysis.summary,
+    evidenceFlags: flags as AiAnalysisRecord["evidenceFlags"],
+    needsHumanReview: analysis.needsHumanReview,
+    modelName: analysis.modelName,
+    modelVersion: analysis.modelVersion,
+    processingTimeMs: analysis.processingTimeMs,
+    errorCode: analysis.errorCode,
+    startedAt: analysis.startedAt,
+    completedAt: analysis.completedAt,
+    createdAt: analysis.createdAt,
+    updatedAt: analysis.updatedAt,
   }
 }
 
@@ -131,18 +175,29 @@ export class ReportTransactionRepository {
         description: input.description,
         gpsAccuracy: input.gpsAccuracy,
         imagePath: input.imagePath,
+        imageMime: input.imageMime,
+        imageSha256: input.imageSha256,
+        imageSize: input.imageSize,
         incidentId: null,
         latitude: input.latitude,
         locationSource: input.locationSource,
         longitude: input.longitude,
         reporterId: input.reporterId,
         severityClaim: input.severityClaim,
+        finalSeverity: input.severityClaim,
+        aiUsed: false,
         uploadSource: "WEB",
-        verificationStatus: "SUBMITTED",
+        verificationStatus: "PENDING_REVIEW",
       },
       select: reportSelect,
     })
     return mapSelectedReport(report)
+  }
+
+  async createProcessingAnalysis(reportId: string, analysisId: string): Promise<void> {
+    await this.transaction.aiAnalysis.create({
+      data: { id: analysisId, reportId, status: "PROCESSING" },
+    })
   }
 
   async lockOwned(reportId: string, reporterId: string): Promise<ReportRecord | null> {
@@ -152,7 +207,7 @@ export class ReportTransactionRepository {
       WHERE r."id" = ${reportId}::uuid AND r."reporter_id" = ${reporterId}::uuid
       FOR UPDATE
     `
-    return rows[0] ?? null
+    return rows[0] === undefined ? null : { ...rows[0], aiAnalysis: null }
   }
 
   async lockById(reportId: string): Promise<ReportRecord | null> {
@@ -162,7 +217,7 @@ export class ReportTransactionRepository {
       WHERE r."id" = ${reportId}::uuid
       FOR UPDATE
     `
-    return rows[0] ?? null
+    return rows[0] === undefined ? null : { ...rows[0], aiAnalysis: null }
   }
 
   async update(reportId: string, data: UpdateReportInput): Promise<ReportRecord> {
@@ -213,13 +268,17 @@ export const reportsRepository = {
     const order = input.query.sort === "asc"
       ? Prisma.sql`r."submitted_at" ASC, r."id" ASC`
       : Prisma.sql`r."submitted_at" DESC, r."id" DESC`
-    return prisma.$queryRaw<ReportRecord[]>`
+    const rows = await prisma.$queryRaw<ReportRecord[]>`
       SELECT ${reportColumns}
       FROM "flood_reports" r
       WHERE ${where}
       ORDER BY ${order}
       LIMIT ${input.query.limit + 1}
     `
+    if (rows.length === 0) return []
+    const analyses = await prisma.aiAnalysis.findMany({ where: { reportId: { in: rows.map((row) => row.id) } } })
+    const analysisByReportId = new Map(analyses.flatMap((analysis) => analysis.reportId === null ? [] : [[analysis.reportId, mapAiAnalysis(analysis)] as const]))
+    return rows.map((row) => ({ ...row, aiAnalysis: analysisByReportId.get(row.id) ?? null }))
   },
 
   async count(input: ReportRepositoryListInput): Promise<number> {

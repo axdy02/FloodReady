@@ -42,7 +42,7 @@ describe("POST /api/v1/reports", () => {
         reporterId: actor.user.id,
         severityClaim: "MODERATE",
         uploadSource: "WEB",
-        verificationStatus: "SUBMITTED",
+        verificationStatus: "PENDING_REVIEW",
       },
     })
     expect(response.body.data).not.toHaveProperty("imagePath")
@@ -57,7 +57,7 @@ describe("POST /api/v1/reports", () => {
     expect(report).toMatchObject({
       incidentId: null,
       reporterId: actor.user.id,
-      verificationStatus: "SUBMITTED",
+      verificationStatus: "PENDING_REVIEW",
     })
     if (report === null) {
       throw new Error("Expected the persisted report")
@@ -75,7 +75,7 @@ describe("POST /api/v1/reports", () => {
     expect(audit).toMatchObject({
       actorId: actor.user.id,
       entityType: "FLOOD_REPORT",
-      metadata: { uploadSource: "WEB", verificationStatus: "SUBMITTED" },
+      metadata: { uploadSource: "WEB", verificationStatus: "PENDING_REVIEW" },
     })
   })
 

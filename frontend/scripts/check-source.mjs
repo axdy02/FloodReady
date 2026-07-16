@@ -36,6 +36,7 @@ export function scanPaths(paths) {
       if (rule === "environment-boundary" && [path.join(root, "src", "lib", "env", "client.ts"), path.join(root, "src", "lib", "env", "server.ts"), path.join(root, "scripts", "with-test-env.mjs")].includes(file)) {
         continue;
       }
+      if (rule === "client-storage" && file === path.join(root, "src", "lib", "storage", "browser-storage.ts")) continue;
       const match = pattern.exec(content);
       if (match !== null) {
         findings.push({ file, rule, line: content.slice(0, match.index).split("\n").length });

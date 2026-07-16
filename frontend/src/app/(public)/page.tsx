@@ -11,7 +11,7 @@ const features: { icon: LucideIcon; title: string; text: string }[] = [
   { icon: Camera, title: "Community reporting", text: "See conditions from the people already on the ground." },
   { icon: BrainCircuit, title: "AI verification", text: "Signal confidence is scored before it reaches your route." },
   { icon: Route, title: "Smarter routes", text: "Avoid flooded corridors, not just traffic congestion." },
-  { icon: BellRing, title: "Live alerts", text: "Useful changes, delivered when they matter near you." },
+  { icon: BellRing, title: "Weather-aware guidance", text: "Understand rain, passability, and local reports before you travel." },
 ];
 
 export default function PublicLandingPage() {
