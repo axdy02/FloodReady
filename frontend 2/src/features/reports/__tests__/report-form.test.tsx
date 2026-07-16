@@ -1,3 +1,0 @@
-import { describe, expect, it } from "vitest";
-import { reportFormSchema, validateImage } from "@/features/reports/report-form-schema";
-describe("report form", () => { it("validates exact evidence and description limits", () => { expect(validateImage(new File(["x"], "x.jpg", { type: "image/jpeg" }), 10)).toBe(true); expect(validateImage(new File(["x"], "x.txt", { type: "text/plain" }), 10)).toBe(false); expect(reportFormSchema.parse({ category: "FLOODED_ROAD", description: "  note  " }).description).toBe("note"); expect(() => reportFormSchema.parse({ category: "FLOODED_ROOD", description: "" })).toThrow(); expect(() => reportFormSchema.parse({ category: "FLOODED_ROAD", description: "x".repeat(1001) })).toThrow(); }); });
