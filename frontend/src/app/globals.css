@@ -38,14 +38,14 @@ aside.fixed > button:first-of-type::before { content:"Gurugram, Haryana"; font-s
 @keyframes float { 50% { transform:translateY(-8px); } }
 @keyframes ping { 70%,100% { opacity:0; transform:scale(1.7); } }
 @media (prefers-reduced-motion:no-preference) {
-  [data-page-transition] main > * { opacity:0; transform:translateY(42px); transition:opacity 900ms cubic-bezier(.16,1,.3,1), transform 900ms cubic-bezier(.16,1,.3,1); }
-  [data-page-transition] main > :nth-child(1) { transition-delay:70ms; }
-  [data-page-transition] main > :nth-child(2) { transition-delay:170ms; }
-  [data-page-transition] main > :nth-child(3) { transition-delay:270ms; }
-  [data-page-transition] main > :nth-child(4) { transition-delay:370ms; }
-  [data-page-transition] main > :nth-child(n+5) { transition-delay:470ms; }
-  [data-page-transition] main :is(h1,h2):not([data-motion-text]) { opacity:0; transform:translateY(36px); transition:opacity 820ms cubic-bezier(.16,1,.3,1) 180ms, transform 820ms cubic-bezier(.16,1,.3,1) 180ms; }
-  [data-page-transition][data-visible="true"] main > *, [data-page-transition][data-visible="true"] main :is(h1,h2):not([data-motion-text]) { opacity:1; transform:translateY(0); }
+  [data-page-transition] main:not([data-scroll-reveal-page]) > * { opacity:0; transform:translate3d(0, 34px, 0); transition:opacity 680ms cubic-bezier(.16,1,.3,1), transform 680ms cubic-bezier(.16,1,.3,1); will-change:opacity,transform; }
+  [data-page-transition] main:not([data-scroll-reveal-page]) > :nth-child(1) { transition-delay:60ms; }
+  [data-page-transition] main:not([data-scroll-reveal-page]) > :nth-child(2) { transition-delay:140ms; }
+  [data-page-transition] main:not([data-scroll-reveal-page]) > :nth-child(3) { transition-delay:220ms; }
+  [data-page-transition] main:not([data-scroll-reveal-page]) > :nth-child(4) { transition-delay:300ms; }
+  [data-page-transition] main:not([data-scroll-reveal-page]) > :nth-child(n+5) { transition-delay:380ms; }
+  [data-page-transition] main:not([data-scroll-reveal-page]) :is(h1,h2):not([data-motion-text]) { opacity:0; transform:translate3d(0, 24px, 0); transition:opacity 620ms cubic-bezier(.16,1,.3,1) 150ms, transform 620ms cubic-bezier(.16,1,.3,1) 150ms; }
+  [data-page-transition][data-visible="true"] main:not([data-scroll-reveal-page]) > *, [data-page-transition][data-visible="true"] main:not([data-scroll-reveal-page]) :is(h1,h2):not([data-motion-text]) { opacity:1; transform:translate3d(0, 0, 0); will-change:auto; }
 }
 @media (prefers-reduced-motion:reduce) {
   *,*::before,*::after { animation-duration:.01ms !important; scroll-behavior:auto !important; }
