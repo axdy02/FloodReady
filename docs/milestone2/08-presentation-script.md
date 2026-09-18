@@ -1,6 +1,6 @@
 # Presentation script
 
-“WaterRadar Milestone 2 has a reporting workflow and a persisted reports map. A signed-in user chooses a location, enters the incident details, and uploads one evidence image in the main `frontend/` app.
+“FloodReady Milestone 2 has a reporting workflow and a persisted reports map. A signed-in user chooses a location, enters the incident details, and uploads one evidence image in the main `frontend/` app.
 
 The browser sends one authenticated multipart request to Backend 1. Backend 1 validates and re-encodes the image, stores the processed bytes in the private uploads volume, and creates the final `flood_reports` row plus an `ai_analyses` row in `PROCESSING`. It returns the saved report immediately, so the report can already appear on the map.
 

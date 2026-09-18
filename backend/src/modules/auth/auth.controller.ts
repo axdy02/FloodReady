@@ -12,7 +12,7 @@ const requestContext = (request: Parameters<RequestHandler>[0]): { ipAddress: st
 });
 
 const refreshCookie = (request: Parameters<RequestHandler>[0]): string | undefined => {
-  const value: unknown = request.cookies?.waterradar_refresh;
+  const value: unknown = request.cookies?.floodready_refresh;
 
   return typeof value === 'string' ? value : undefined;
 };
@@ -36,7 +36,7 @@ export const loginController: RequestHandler = async (request, response, next) =
     const result = await login(parseLoginInput(request.body), requestContext(request));
     noStore(response);
     response.cookie(
-      'waterradar_refresh',
+      'floodready_refresh',
       result.refreshToken,
       refreshCookieOptions(result.refreshExpiresAt.getTime() - Date.now())
     );
@@ -52,7 +52,7 @@ export const refreshController: RequestHandler = async (request, response, next)
 
     if (rawToken === undefined) {
       noStore(response);
-      response.cookie('waterradar_refresh', '', clearRefreshCookieOptions());
+      response.cookie('floodready_refresh', '', clearRefreshCookieOptions());
       next(new AppError(401, 'INVALID_REFRESH_TOKEN', 'Invalid refresh token'));
       return;
     }
@@ -61,14 +61,14 @@ export const refreshController: RequestHandler = async (request, response, next)
 
     if (result.kind === 'invalid') {
       noStore(response);
-      response.cookie('waterradar_refresh', '', clearRefreshCookieOptions());
+      response.cookie('floodready_refresh', '', clearRefreshCookieOptions());
       next(new AppError(401, 'INVALID_REFRESH_TOKEN', 'Invalid refresh token'));
       return;
     }
 
     noStore(response);
     response.cookie(
-      'waterradar_refresh',
+      'floodready_refresh',
       result.refreshToken,
       refreshCookieOptions(result.refreshExpiresAt.getTime() - Date.now())
     );
@@ -82,7 +82,7 @@ export const logoutController: RequestHandler = async (request, response, next) 
   try {
     await logout(refreshCookie(request), { ipAddress: request.ip ?? '0.0.0.0' });
     noStore(response);
-    response.cookie('waterradar_refresh', '', clearRefreshCookieOptions());
+    response.cookie('floodready_refresh', '', clearRefreshCookieOptions());
     response.status(200).json({ success: true, data: null, requestId: request.requestId });
   } catch (error) {
     next(error);

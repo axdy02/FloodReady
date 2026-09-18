@@ -14,7 +14,7 @@ export function PillNav({ items, activeHref }: { items: readonly PillNavItem[]; 
   const [isOpen, setIsOpen] = useState(false);
   const isActive = (href: string) => activeHref === href || href !== "/" && activeHref.startsWith(`${href}/`);
 
-  return <nav className={styles.navigation} aria-label="WaterRadar sections">
+  return <nav className={styles.navigation} aria-label="FloodReady sections">
     <ul className={styles.desktopList}>
       {items.map((item) => <li key={item.href}>
         <Link href={item.href} className={`${styles.link} ${isActive(item.href) ? styles.active : ""}`}>

@@ -1,4 +1,4 @@
-// WaterRadar Milestone 2 presentation schema.
+// FloodReady Milestone 2 presentation schema.
 // Authority: backend/prisma/schema.prisma and backend/prisma/migrations/*.
 // Storage bytes are outside PostgreSQL in the private uploads_data volume.
 

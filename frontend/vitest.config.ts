@@ -13,17 +13,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       thresholds: { statements: 85, lines: 85, functions: 85, branches: 80 },
-      exclude: [
-        "src/tests/**",
-        "src/**/*.test.*",
-        "src/**/__tests__/**",
-        "src/**/*.d.ts",
-        "src/components/ClickSpark.tsx",
-        "src/components/Magnet.tsx",
-        "src/components/Noise.tsx",
-        "src/components/ScrollFloat.tsx",
-        "src/components/ScrollReveal.tsx"
-      ]
+      exclude: ["src/tests/**", "src/**/*.test.*", "src/**/__tests__/**", "src/**/*.d.ts"]
     }
   }
 });

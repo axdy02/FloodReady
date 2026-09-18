@@ -50,7 +50,7 @@ describe("health-runtime", () => {
     expect(response.headers["x-request-id"]).toBe(requestId);
     expect(response.body).toMatchObject({
       success: true,
-      data: { status: "ok", service: "waterradar-backend" },
+      data: { status: "ok", service: "floodready-backend" },
       requestId
     });
   });
@@ -61,7 +61,7 @@ describe("health-runtime", () => {
 
     expect(response.body).toMatchObject({
       success: true,
-      data: { status: "ready", service: "waterradar-backend" }
+      data: { status: "ready", service: "floodready-backend" }
     });
   });
 

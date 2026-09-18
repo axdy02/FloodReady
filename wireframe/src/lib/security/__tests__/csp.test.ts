@@ -6,8 +6,6 @@ const environment = parseClientEnvironment({
   FRONTEND_ENV: "test",
   NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001/api/v1",
   NEXT_PUBLIC_APP_ORIGIN: "http://localhost:3000",
-  NEXT_PUBLIC_ALLOW_INSECURE_PUBLIC_HTTP: "false",
-  NEXT_PUBLIC_CARTO_BASEMAP_KEY: "test-carto-key",
   NEXT_PUBLIC_MAP_STYLE_URL: "https://map.test.invalid/style.json",
   NEXT_PUBLIC_MAP_ATTRIBUTION: "Test fixture only",
   NEXT_PUBLIC_MAP_CONNECT_ORIGINS: "https://tiles.test.invalid,https://map.test.invalid",
@@ -29,10 +27,5 @@ describe("content security policy", () => {
   it("adds development eval only when asked", () => {
     expect(createContentSecurityPolicy(environment, "first", true)).toContain("'unsafe-eval'");
     expect(createContentSecurityPolicy(environment, "second", false)).not.toContain("'unsafe-eval'");
-  });
-
-  it("does not upgrade the explicitly enabled public HTTP deployment", () => {
-    const publicHttp = parseClientEnvironment({ ...environment, FRONTEND_ENV: "production", NEXT_PUBLIC_API_BASE_URL: "http://203.0.113.10:3001/api/v1", NEXT_PUBLIC_APP_ORIGIN: "http://203.0.113.10:3000", NEXT_PUBLIC_ALLOW_INSECURE_PUBLIC_HTTP: "true", NEXT_PUBLIC_DEFAULT_MAP_LATITUDE: "0", NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE: "0", NEXT_PUBLIC_DEFAULT_MAP_ZOOM: "2", NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB: "10" });
-    expect(createContentSecurityPolicy(publicHttp, "nonce", false)).not.toContain("upgrade-insecure-requests");
   });
 });

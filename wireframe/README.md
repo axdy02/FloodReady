@@ -1,4 +1,4 @@
-# WaterRadar comparison wireframe
+# FloodReady comparison wireframe
 
 `wireframe/` is the separate Next.js comparison/testing application exposed at `http://localhost:3002` by the root Compose stack. It uses the same Backend 1 API, PostgreSQL data, protected image endpoint, and map data as the main frontend.
 

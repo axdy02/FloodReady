@@ -44,7 +44,7 @@ Supporting components and hooks:
 
 ```text
 +----------------------------------------------------------------------------+
-| WaterRadar · Milestone 2 | [Reports Map] [Submit Flood Report] [Sign out] |
+| FloodReady · Milestone 2 | [Reports Map] [Submit Flood Report] [Sign out] |
 +----------------------------------------------------------------------------+
 | MILESTONE 2 WIREFRAME                                                     |
 | Reports Map                          [Refresh] [Submit Flood Report]        |
@@ -100,7 +100,7 @@ Supporting code:
 
 ```text
 +----------------------------------------------------------------------------+
-| WaterRadar · Milestone 2 | [Reports Map] [Submit Flood Report] [Sign out] |
+| FloodReady · Milestone 2 | [Reports Map] [Submit Flood Report] [Sign out] |
 +----------------------------------------------------------------------------+
 | MILESTONE 2 WIREFRAME                                                     |
 | Submit Flood Report                                                       |
@@ -181,7 +181,7 @@ Primary implementation: `frontend/src/features/reports/submitted-reports.tsx` an
 
 ```text
 +----------------------------------------------------------------------------+
-| WaterRadar · Milestone 2 | [Reports Map] [My Reports] [Submit] [Sign out]  |
+| FloodReady · Milestone 2 | [Reports Map] [My Reports] [Submit] [Sign out]  |
 +----------------------------------------------------------------------------+
 | REPORTING WORKFLOW                                 [Refresh] [Submit report]|
 | Submitted Reports                                                         |

@@ -1,6 +1,6 @@
-# WaterRadar
+# FloodReady
 
-WaterRadar currently implements two connected features: authenticated users submit a flood report with a private evidence image, and the same persisted report appears on the shared map while Backend 1 validates it with Backend 2.
+FloodReady currently implements two connected features: authenticated users submit a flood report with a private evidence image, and the same persisted report appears on the shared map while Backend 1 validates it with Backend 2.
 
 ## Architecture
 
@@ -14,7 +14,7 @@ Wireframe (3002) ────┼──> Backend 1 / Express + Prisma (3001) ─�
 - `frontend/` is the main, user-facing Next.js application at `http://localhost:3000`.
 - `wireframe/` is preserved for comparison/testing at `http://localhost:3002`.
 - Both frontends use the same authenticated Backend 1 API, PostgreSQL data, protected report images, and AI-result fields.
-- Backend 1 owns persistence and API responses. Backend 2 has no database access; it receives a controlled internal request containing the stored report image and selected location.
+- Backend 1 owns persistence and API responses. Backend 2 has no database access; it receives a controlled internal request containing the report image and selected location.
 - A LangGraph validation workflow coordinates weather evidence, Gemini 3.1 Flash-Lite image analysis, response validation, and final scoring. Open-Meteo supplies the previous two days and current weather for location context.
 
 ## Report validation flow
@@ -28,7 +28,7 @@ Wireframe (3002) ────┼──> Backend 1 / Express + Prisma (3001) ─�
 
 The database authority is [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma) plus the committed migrations. Existing public response DTOs expose both the original user input (`severityClaim`) and AI output (`aiAnalysis.suggestedSeverity`, `confidenceScore`, and validation fields).
 
-The current route-by-route contract is in [docs/milestone2/05-api-contract.md](docs/milestone2/05-api-contract.md). It documents Backend 1 account/report/incident APIs, Backend 2's protected internal analysis endpoint, and the Next.js helper routes. For the public EC2/S3 deployment mode, see [docs/EC2_DEPLOYMENT.md](docs/EC2_DEPLOYMENT.md).
+The current route-by-route contract is in [docs/milestone2/05-api-contract.md](docs/milestone2/05-api-contract.md). It documents Backend 1 account/report/incident APIs, Backend 2's protected internal analysis endpoint, and the Next.js helper routes.
 
 ## Run the complete stack
 

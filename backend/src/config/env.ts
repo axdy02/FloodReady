@@ -50,9 +50,6 @@ const serviceToken = z.string().regex(/^[A-Za-z0-9_-]+$/u).refine((value) => {
 }, "Invalid service token");
 
 const databaseUrl = z.string().url().refine((value) => isPostgresUrl(value), "Invalid PostgreSQL URL");
-const booleanFlag = z.enum(["true", "false"]).transform((value) => value === "true");
-const optionalBooleanFlag = z.preprocess((value) => value === "" ? undefined : value, booleanFlag.optional());
-const optionalNonEmpty = z.string().optional().transform((value) => value === undefined || value.trim().length === 0 ? undefined : value.trim()).pipe(z.string().min(1).optional());
 
 const urlList = z.string().transform((value, context) => {
   const values = value.split(",").map((item) => item.trim()).filter((item) => item.length > 0);
@@ -89,11 +86,6 @@ const schema = z.object({
   PUBLIC_API_ORIGIN: z.string().refine((value) => isExactOrigin(value), "Invalid API origin"),
   CORS_ORIGINS: urlList,
   COOKIE_DOMAIN: z.string(),
-  COOKIE_SECURE: optionalBooleanFlag,
-  ALLOW_INSECURE_PUBLIC_HTTP: booleanFlag.default(false),
-  IMAGE_STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
-  AWS_REGION: optionalNonEmpty,
-  S3_BUCKET_NAME: optionalNonEmpty,
   UPLOAD_DIRECTORY: z.string().trim().min(1).transform((value) => resolve(value)),
   MAX_UPLOAD_SIZE_MB: z.coerce.number().int().min(1).max(20),
   MAX_IMAGE_PIXELS: z.coerce.number().int().min(1_000_000).max(25_000_000),
@@ -122,8 +114,6 @@ const schema = z.object({
   const refreshSecret = Buffer.from(value.REFRESH_TOKEN_SECRET, "base64url");
   const aiServiceToken = Buffer.from(value.AI_SERVICE_TOKEN, "base64url");
   const publicOrigin = new URL(value.PUBLIC_API_ORIGIN);
-  const configuredOrigins = [value.PUBLIC_API_ORIGIN, ...value.CORS_ORIGINS];
-  const hasHttpOrigin = configuredOrigins.some((origin) => new URL(origin).protocol === "http:");
 
   if (accessSecret.equals(refreshSecret)) {
     context.addIssue({ code: "custom", path: ["REFRESH_TOKEN_SECRET"], message: "Token secrets must differ" });
@@ -145,27 +135,10 @@ const schema = z.object({
   if (value.COOKIE_DOMAIN.length > 0 && !domainPattern.test(value.COOKIE_DOMAIN)) {
     context.addIssue({ code: "custom", path: ["COOKIE_DOMAIN"], message: "Invalid cookie domain" });
   }
-  if (value.IMAGE_STORAGE_DRIVER === "s3") {
-    if (value.AWS_REGION === undefined) {
-      context.addIssue({ code: "custom", path: ["AWS_REGION"], message: "AWS_REGION is required when IMAGE_STORAGE_DRIVER=s3" });
-    }
-    if (value.S3_BUCKET_NAME === undefined) {
-      context.addIssue({ code: "custom", path: ["S3_BUCKET_NAME"], message: "S3_BUCKET_NAME is required when IMAGE_STORAGE_DRIVER=s3" });
-    }
-  }
-  if (value.NODE_ENV === "production" && hasHttpOrigin && !value.ALLOW_INSECURE_PUBLIC_HTTP) {
-    context.addIssue({ code: "custom", path: ["ALLOW_INSECURE_PUBLIC_HTTP"], message: "Production HTTP origins require ALLOW_INSECURE_PUBLIC_HTTP=true" });
-  }
-  if (value.NODE_ENV === "production" && hasHttpOrigin && value.COOKIE_SECURE !== false) {
-    context.addIssue({ code: "custom", path: ["COOKIE_SECURE"], message: "Production HTTP origins require COOKIE_SECURE=false" });
-  }
-  if (value.NODE_ENV === "production" && !hasHttpOrigin && value.COOKIE_SECURE === false) {
-    context.addIssue({ code: "custom", path: ["COOKIE_SECURE"], message: "Secure HTTPS production cookies cannot be disabled" });
-  }
-  for (const origin of configuredOrigins) {
+  for (const origin of [value.PUBLIC_API_ORIGIN, ...value.CORS_ORIGINS]) {
     const parsed = new URL(origin);
-    if (value.NODE_ENV === "production" && parsed.protocol !== "https:" && !value.ALLOW_INSECURE_PUBLIC_HTTP) {
-      context.addIssue({ code: "custom", path: ["CORS_ORIGINS"], message: "Production origins must use HTTPS unless explicit HTTP mode is enabled" });
+    if (value.NODE_ENV === "production" && parsed.protocol !== "https:") {
+      context.addIssue({ code: "custom", path: ["CORS_ORIGINS"], message: "Production origins must use HTTPS" });
       break;
     }
     if (value.COOKIE_DOMAIN.length === 0) {

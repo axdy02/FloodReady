@@ -10,11 +10,11 @@ export default function SettingsPage() {
   return <main className="mx-auto max-w-4xl px-5 py-10">
     <p className="text-xs font-semibold tracking-[.18em] text-blue-400">PREFERENCES</p>
     <h1 className="mt-2 text-3xl font-semibold tracking-[-.04em]">Settings</h1>
-    <p className="mt-2 text-sm text-zinc-500">Control how WaterRadar communicates with you and protects your account.</p>
+    <p className="mt-2 text-sm text-zinc-500">Control how FloodReady communicates with you and protects your account.</p>
     <div className="mt-8 space-y-3">
       <ConnectionCheck />
       <Setting icon={<Bell className="size-5" />} title="Notifications" text="Critical nearby incidents, route changes, and verification updates." control={<button className="rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-semibold">Enabled</button>} />
-      <Setting icon={<Moon className="size-5" />} title="Appearance" text="WaterRadar uses a dark map interface optimized for night-time visibility." control={<select className="rounded-lg border border-white/10 bg-[#111113] px-3 py-1.5 text-xs"><option>Dark</option><option>System</option></select>} />
+      <Setting icon={<Moon className="size-5" />} title="Appearance" text="FloodReady uses a dark map interface optimized for night-time visibility." control={<select className="rounded-lg border border-white/10 bg-[#111113] px-3 py-1.5 text-xs"><option>Dark</option><option>System</option></select>} />
       <Setting icon={<Globe2 className="size-5" />} title="Language" text="Choose the language used for weather summaries and navigation guidance." control={<select className="rounded-lg border border-white/10 bg-[#111113] px-3 py-1.5 text-xs"><option>English</option><option>Hindi</option></select>} />
       <Setting icon={<LockKeyhole className="size-5" />} title="Privacy and security" text="Manage your profile visibility, password, and active sessions." control={<button className="text-xs font-semibold text-blue-300">Manage</button>} />
     </div>
@@ -44,7 +44,7 @@ function ConnectionCheck() {
   const checking = frontend === "checking" || backend === "checking";
   return <section className="surface-card rounded-2xl p-5" aria-labelledby="connection-title">
     <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex gap-4"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-400/10 text-emerald-300"><Server className="size-5" /></span><div><h2 id="connection-title" className="text-sm font-semibold">System connection</h2><p className="mt-1 max-w-xl text-xs leading-5 text-zinc-500">Check that this frontend and the configured backend are responding. Refreshing checks only these services; it does not reload the page.</p></div></div><button type="button" onClick={() => void refreshConnection()} disabled={checking} className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[.04] px-3 py-2 text-xs font-semibold hover:bg-white/[.08] disabled:cursor-wait disabled:opacity-60"><RefreshCw className={`size-3.5 ${checking ? "animate-spin" : ""}`} />{checking ? "Checking…" : "Refresh status"}</button></div>
-    <div className="mt-5 grid gap-2 sm:grid-cols-2" aria-live="polite"><StatusRow label="Frontend" detail="Local WaterRadar application" status={frontend} /><StatusRow label="Backend" detail="API readiness connection" status={backend} /></div>
+    <div className="mt-5 grid gap-2 sm:grid-cols-2" aria-live="polite"><StatusRow label="Frontend" detail="Local FloodReady application" status={frontend} /><StatusRow label="Backend" detail="API readiness connection" status={backend} /></div>
     <p className="mt-4 text-[11px] text-zinc-600">{checkedAt === null ? "Status has not been checked yet." : `Last checked at ${checkedAt}.`}</p>
   </section>;
 }

@@ -1,4 +1,4 @@
-# WaterRadar AI service
+# FloodReady AI service
 
 Backend 2 is a FastAPI service that validates submitted flood evidence for triage. It exposes the internal flood-analysis endpoint and health/readiness endpoints on port 8000.
 

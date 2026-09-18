@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1080" viewBox="0 0 1600 1080" role="img" aria-labelledby="title desc">
-  <title id="title">WaterRadar Milestone 2 database schema</title>
+  <title id="title">FloodReady Milestone 2 database schema</title>
   <desc id="desc">Current PostgreSQL PostGIS schema. Flood reports are created immediately, AI analysis runs in the background, and report drafts are an alternate legacy path.</desc>
   <defs>
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0f172a" flood-opacity=".12"/></filter>
@@ -16,7 +16,7 @@
     </style>
   </defs>
   <rect width="1600" height="1080" fill="#ffffff"/>
-  <text x="54" y="58" class="title">WaterRadar Milestone 2 database schema</text>
+  <text x="54" y="58" class="title">FloodReady Milestone 2 database schema</text>
   <text x="54" y="88" class="subtitle">Prisma schema + migrations: one PostgreSQL/PostGIS schema owned by Backend 1</text>
   <rect x="1140" y="37" width="405" height="45" rx="23" fill="#ecfdf5" stroke="#86efac"/>
   <text x="1342" y="65" text-anchor="middle" font-size="14" font-weight="700" fill="#166534">Backend 2 has no database access</text>

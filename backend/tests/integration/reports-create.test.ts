@@ -62,7 +62,7 @@ describe("POST /api/v1/reports", () => {
     if (report === null) {
       throw new Error("Expected the persisted report")
     }
-    expect(report.imagePath).toMatch(new RegExp(`^reports/${id}/[0-9a-f-]+\\.jpg$`, "u"))
+    expect(report.imagePath).toMatch(/^reports\/\d{4}\/(0[1-9]|1[0-2])\/[0-9a-f-]+\.jpg$/u)
     expect(report.imagePath).not.toContain("untrusted-client-name")
 
     const storedMetadata = await sharp(await readFile(uploadPath(report.imagePath))).metadata()

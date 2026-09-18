@@ -143,7 +143,7 @@ export const refreshCookieOptions = (remainingLifetimeMs: number): CookieOptions
     httpOnly: true,
     sameSite: 'strict',
     path: '/api/v1/auth',
-    secure: config.COOKIE_SECURE ?? config.NODE_ENV === 'production',
+    secure: config.NODE_ENV === 'production',
     maxAge: Math.max(0, remainingLifetimeMs)
   };
 

@@ -40,7 +40,7 @@ export function ServiceStatus() {
       </Button>
     </div>
     <div className="mt-6 grid gap-3 sm:grid-cols-2">
-      <StatusCard icon={<Activity />} label="Frontend" detail="This browser is receiving the WaterRadar app." ready />
+      <StatusCard icon={<Activity />} label="Frontend" detail="This browser is receiving the FloodReady app." ready />
       <StatusCard icon={backendReady ? <CheckCircle2 /> : <ServerCrash />} label="Backend API" detail={backendReady ? "The API readiness endpoint responded successfully." : "The frontend is up, but it could not reach the backend readiness endpoint."} ready={backendReady} />
     </div>
   </section>

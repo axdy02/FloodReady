@@ -12,10 +12,10 @@ type Point = { id: string; label: string; latitude: number; longitude: number }
 type Locations = { schemaVersion: 1; cityLabel: string; defaultCenter: { latitude: number; longitude: number; zoom: number }; points: Point[] }
 
 const users = [
-  ["10000000-0000-4000-8000-000000000001", "Demo Citizen One", "citizen.one@waterradar.invalid", "USER", "DEMO_CITIZEN_PASSWORD"],
-  ["10000000-0000-4000-8000-000000000002", "Demo Citizen Two", "citizen.two@waterradar.invalid", "USER", "DEMO_CITIZEN_PASSWORD"],
-  ["10000000-0000-4000-8000-000000000003", "Demo Moderator", "moderator@waterradar.invalid", "MODERATOR", "DEMO_MODERATOR_PASSWORD"],
-  ["10000000-0000-4000-8000-000000000004", "Demo Administrator", "administrator@waterradar.invalid", "ADMIN", "DEMO_ADMIN_PASSWORD"],
+  ["10000000-0000-4000-8000-000000000001", "Demo Citizen One", "citizen.one@floodready.invalid", "USER", "DEMO_CITIZEN_PASSWORD"],
+  ["10000000-0000-4000-8000-000000000002", "Demo Citizen Two", "citizen.two@floodready.invalid", "USER", "DEMO_CITIZEN_PASSWORD"],
+  ["10000000-0000-4000-8000-000000000003", "Demo Moderator", "moderator@floodready.invalid", "MODERATOR", "DEMO_MODERATOR_PASSWORD"],
+  ["10000000-0000-4000-8000-000000000004", "Demo Administrator", "administrator@floodready.invalid", "ADMIN", "DEMO_ADMIN_PASSWORD"],
 ] as const
 const reports = [
   ["20000000-0000-4000-8000-000000000001", 1, 1, "ROAD_WATERLOGGING", "MINOR", "SUBMITTED", null, "2026-07-01T09:05:00.000Z"],
@@ -112,7 +112,7 @@ export async function runDemoSeed(input: { config: DemoSeedConfig; locations: un
     let imagePath = existing?.imagePath
     if (imagePath === undefined) {
       const processed = await imageFor(pointNumber)
-      imagePath = (await input.storage.saveValidatedImage({ bytes: processed, extension: "jpg", recordId: id, serverTime: submittedAt })).key
+      imagePath = (await input.storage.saveValidatedImage({ bytes: processed, extension: "jpg", serverTime: submittedAt })).key
       reportHashes.set(id, hash(processed))
     } else {
       reportHashes.set(id, hash((await input.storage.read(imagePath)).bytes))

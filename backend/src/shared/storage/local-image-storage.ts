@@ -1,8 +1,6 @@
 import { randomUUID } from "node:crypto"
-import { constants } from "node:fs"
 import {
   chmod,
-  access,
   link,
   lstat,
   mkdir,
@@ -21,9 +19,7 @@ import {
   type StoredImage,
 } from "./image-storage.js"
 
-const uuidPattern = "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
-const keyPattern = new RegExp(`^reports/${uuidPattern}/${uuidPattern}\\.(jpg|png|webp)$`)
-const recordIdPattern = new RegExp(`^${uuidPattern}$`)
+const keyPattern = /^reports\/[0-9]{4}\/(0[1-9]|1[0-2])\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp)$/
 
 const isMissing = (error: unknown): boolean => error instanceof Error && "code" in error && error.code === "ENOENT"
 
@@ -59,23 +55,6 @@ export class LocalImageStorage implements ImageStorage {
     return realpath(this.#root)
   }
 
-  async initialize(): Promise<void> {
-    try {
-      await this.#rootPath()
-    } catch (error) {
-      if (error instanceof ImageStorageError) throw error
-      throw new ImageStorageError({ cause: error })
-    }
-  }
-
-  async checkHealth(): Promise<void> {
-    try {
-      await access(this.#root, constants.R_OK | constants.W_OK)
-    } catch (error) {
-      throw new ImageStorageError({ cause: error })
-    }
-  }
-
   async #resolveKey(key: string, createDirectory: boolean): Promise<string> {
     if (!keyPattern.test(key)) {
       throw new ImageStorageError()
@@ -102,10 +81,9 @@ export class LocalImageStorage implements ImageStorage {
   }
 
   async saveValidatedImage(input: SaveValidatedImageInput): Promise<SavedImage> {
-    if (!recordIdPattern.test(input.recordId)) {
-      throw new ImageStorageError()
-    }
-    const key = `reports/${input.recordId}/${randomUUID()}.${input.extension}`
+    const year = input.serverTime.getUTCFullYear().toString().padStart(4, "0")
+    const month = (input.serverTime.getUTCMonth() + 1).toString().padStart(2, "0")
+    const key = `reports/${year}/${month}/${randomUUID()}.${input.extension}`
     const finalPath = await this.#resolveKey(key, true)
     const temporaryPath = `${finalPath}.${randomUUID()}.tmp`
     let handle: Awaited<ReturnType<typeof open>> | null = null

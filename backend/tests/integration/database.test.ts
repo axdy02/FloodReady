@@ -18,7 +18,7 @@ describe("PostGIS database contract", () => {
     expect(config.NODE_ENV).toBe("test");
     expect(config.TEST_DATABASE_URL).toBeDefined();
     expect(config.DATABASE_URL).toBe(config.TEST_DATABASE_URL);
-    expect(new URL(config.TEST_DATABASE_URL ?? "postgresql://localhost/waterradar_test").pathname).toMatch(/_test$/u);
+    expect(new URL(config.TEST_DATABASE_URL ?? "postgresql://localhost/floodready_test").pathname).toMatch(/_test$/u);
   });
 
   it("enables PostGIS and computes generated geography points", async () => {

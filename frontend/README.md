@@ -1,4 +1,4 @@
-# WaterRadar main frontend
+# FloodReady main frontend
 
 `frontend/` is the canonical Next.js application served at `http://localhost:3000` by the root Compose stack. It is the primary Milestone 2 user interface.
 

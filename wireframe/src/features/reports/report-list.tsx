@@ -40,7 +40,7 @@ export function ReportList() {
       <div>
         <p className="text-xs font-semibold tracking-[.18em] text-blue-400">INCIDENT MANAGEMENT · {mode.toUpperCase()} DATA</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-.04em]">Reports</h1>
-        <p className="mt-2 text-sm text-zinc-500">{mode === "demo" ? `${demoDisplayReports.length} connected demo reports used throughout WaterRadar.` : "Reports submitted from your connected live account."}</p>
+        <p className="mt-2 text-sm text-zinc-500">{mode === "demo" ? `${demoDisplayReports.length} connected demo reports used throughout FloodReady.` : "Reports submitted from your connected live account."}</p>
       </div>
       <Link href="/reports/new" className="rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white">+ New report</Link>
     </div>

@@ -16,7 +16,7 @@ This is the current API reference for the live repository. Backend 1 is served a
 | Method and path | Auth | Request | Result |
 |---|---|---|---|
 | `GET /health` | No | None | Dependency-independent liveness |
-| `GET /health/ready` | No | None | Database and configured image-storage readiness |
+| `GET /health/ready` | No | None | Database and upload-storage readiness |
 | `GET /health/services` | Bearer | None | Backend 1 service-readiness view |
 | `POST /auth/register` | No | JSON: `name`, `email`, `password` | Creates a user; returns `UserDto` |
 | `POST /auth/login` | No | JSON: `email`, `password` | Returns `AuthDto` and sets the HttpOnly refresh cookie |
@@ -67,7 +67,7 @@ gpsAccuracy       Required for DEVICE_GPS; omitted for MANUAL
 image             One JPEG, PNG, or WebP image
 ```
 
-Backend 1 authenticates before multipart parsing, limits upload capacity, checks detected file signature against the supplied MIME type, validates/normalizes pixels with Sharp, removes unsafe metadata by re-encoding, and stores private bytes under the opaque `reports/<report-id>/<uuid>.<extension>` key. The key is written to local storage or private S3 according to `IMAGE_STORAGE_DRIVER`; `image_path` is never returned to the client.
+Backend 1 authenticates before multipart parsing, limits upload capacity, checks detected file signature against the supplied MIME type, validates/normalizes pixels with Sharp, removes unsafe metadata by re-encoding, and stores private bytes under an opaque local key. `image_path` is never returned to the client.
 
 ### Report list and map query
 
@@ -130,7 +130,7 @@ fetch_weather_evidence
 
 The success payload includes `analysisId`, `status=SUCCEEDED`, flood detection, suggested severity, confidence, water-level category, road passability, image quality, summary, evidence flags, human-review flag, validation score/outcome, weather summary/values, model name/version, and processing time. Controlled errors include `UNAUTHORIZED` (401), `VALIDATION_ERROR` (422), `AI_TIMEOUT` (504), `AI_UNAVAILABLE` (503), and `AI_INVALID_RESPONSE` (502).
 
-Backend 2 has no PostgreSQL connection and no permanent image storage. Backend 1 reads the configured private storage driver and sends image bytes only for the active internal request; Gemini receives the prepared image as inline data plus limited report and weather context.
+Backend 2 has no PostgreSQL connection and no permanent image storage. It receives image bytes only for the active internal request; Gemini receives the prepared image as inline data plus limited report and weather context.
 
 ## Next.js route handlers
 

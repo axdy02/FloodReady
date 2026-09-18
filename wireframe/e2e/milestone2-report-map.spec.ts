@@ -67,7 +67,7 @@ test("creates a persisted report and reads its photo back through history and th
 
   await page.getByLabel("Description").fill(description);
   await page.locator('input[type="file"]').setInputFiles({ name: "milestone2.png", mimeType: "image/png", buffer: evidencePng });
-  const map = page.getByLabel("WaterRadar map");
+  const map = page.getByLabel("FloodReady map");
   const formCanvas = map.locator(".maplibregl-canvas");
   await expect(formCanvas).toBeVisible();
   await expect(async () => {
@@ -119,7 +119,7 @@ test("creates a persisted report and reads its photo back through history and th
 
   await page.getByRole("button", { name: "Close report details" }).click();
   await expect(markerDetails).toBeHidden();
-  const resultsCanvas = page.getByLabel("WaterRadar map").locator(".maplibregl-canvas");
+  const resultsCanvas = page.getByLabel("FloodReady map").locator(".maplibregl-canvas");
   await expect(async () => {
     const bounds = await resultsCanvas.boundingBox();
     if (bounds === null) throw new Error("Expected the reports-map canvas");

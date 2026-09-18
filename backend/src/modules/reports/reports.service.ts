@@ -268,32 +268,22 @@ export class ReportsService {
       }
       throw error
     }
-    const reportId = randomUUID()
     const saved = await this.storage.saveValidatedImage({
       bytes: processed.bytes,
       extension: processed.extension,
-      recordId: reportId,
       serverTime: input.serverTime,
     })
-    let stored: Awaited<ReturnType<ImageStorage["read"]>>
-    try {
-      stored = await this.storage.read(saved.key)
-    } catch (error) {
-      await this.storage.delete(saved.key).catch(() => undefined)
-      throw error
-    }
-    const imageMime = mimeForExtension(stored.extension)
-    const imageSha256 = createHash("sha256").update(stored.bytes).digest("hex")
+    const imageMime = mimeForExtension(processed.extension)
+    const imageSha256 = createHash("sha256").update(processed.bytes).digest("hex")
     const analysisId = randomUUID()
     try {
       const created = await reportsRepository.transaction(async (repository) => {
         const report = await repository.create({
           ...input,
-          id: reportId,
           imageMime,
           imagePath: saved.key,
           imageSha256,
-          imageSize: stored.bytes.length,
+          imageSize: processed.bytes.length,
           reporterId: input.actorId,
         })
         await repository.createProcessingAnalysis(report.id, analysisId)
@@ -313,7 +303,7 @@ export class ReportsService {
           void this.processReportAnalysis({
             analysisId,
             description: created.description,
-            imageBytes: stored.bytes,
+            imageBytes: processed.bytes,
             imageMime,
             latitude: created.latitude,
             longitude: created.longitude,
@@ -396,18 +386,11 @@ export class ReportsService {
       if (error instanceof ImageProcessingError) throw imageError(error)
       throw error
     }
+    const saved = await this.storage.saveValidatedImage({ bytes: processed.bytes, extension: processed.extension, serverTime: input.serverTime })
     const draftId = randomUUID()
-    const saved = await this.storage.saveValidatedImage({ bytes: processed.bytes, extension: processed.extension, recordId: draftId, serverTime: input.serverTime })
-    let stored: Awaited<ReturnType<ImageStorage["read"]>>
-    try {
-      stored = await this.storage.read(saved.key)
-    } catch (error) {
-      await this.storage.delete(saved.key).catch(() => undefined)
-      throw error
-    }
     const analysisId = randomUUID()
-    const imageMime = mimeForExtension(stored.extension)
-    const imageSha256 = createHash("sha256").update(stored.bytes).digest("hex")
+    const imageMime = mimeForExtension(processed.extension)
+    const imageSha256 = createHash("sha256").update(processed.bytes).digest("hex")
     try {
       await prisma.$transaction(async (transaction) => {
         await transaction.reportDraft.create({
@@ -415,7 +398,7 @@ export class ReportsService {
             id: draftId, reporterId: input.actorId, category: input.category, description: input.description,
             severityClaim: input.severityClaim, latitude: input.latitude, longitude: input.longitude,
             gpsAccuracy: input.gpsAccuracy, locationSource: input.locationSource, capturedAt: input.capturedAt,
-            imagePath: saved.key, imageMime, imageSize: stored.bytes.length, imageSha256,
+            imagePath: saved.key, imageMime, imageSize: processed.bytes.length, imageSha256,
             expiresAt: new Date(input.serverTime.getTime() + 30 * 60 * 1000),
           },
         })
@@ -427,7 +410,7 @@ export class ReportsService {
     }
     const client = new AiAnalysisClient(config.AI_SERVICE_BASE_URL, config.AI_SERVICE_TOKEN, config.AI_SERVICE_TIMEOUT_MS)
     try {
-      const result = await client.analyze({ analysisId, reportId: draftId, description: input.description, userSeverity: input.severityClaim, latitude: input.latitude, longitude: input.longitude, imageBytes: stored.bytes, imageMime, requestId })
+      const result = await client.analyze({ analysisId, reportId: draftId, description: input.description, userSeverity: input.severityClaim, latitude: input.latitude, longitude: input.longitude, imageBytes: processed.bytes, imageMime, requestId })
       await prisma.aiAnalysis.update({
         where: { id: analysisId },
         data: { status: "SUCCEEDED", floodDetected: result.floodDetected, suggestedSeverity: result.suggestedSeverity,

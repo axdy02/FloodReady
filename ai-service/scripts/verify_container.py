@@ -89,9 +89,9 @@ def main() -> None:
     else:
         raise SystemExit("expected --build-context <path>")
     run_id = uuid.uuid4().hex[:12]
-    image = f"waterradar-ai-service:wp13-{run_id}"
-    container = f"waterradar-ai-wp13-{run_id}"
-    label = f"com.waterradar.wp13-run={run_id}"
+    image = f"floodready-ai-service:wp13-{run_id}"
+    container = f"floodready-ai-wp13-{run_id}"
+    label = f"com.floodready.wp13-run={run_id}"
     if len(run_id) != 12 or any(char not in "0123456789abcdef" for char in run_id):
         raise SystemExit("invalid run id")
     try:
@@ -107,7 +107,7 @@ def main() -> None:
             raise SystemExit("image workdir contract failed")
         if not metadata.get("Config", {}).get("Healthcheck"):
             raise SystemExit("image healthcheck missing")
-        if metadata.get("Config", {}).get("Labels", {}).get("com.waterradar.wp13-run") != run_id:
+        if metadata.get("Config", {}).get("Labels", {}).get("com.floodready.wp13-run") != run_id:
             raise SystemExit("image ownership label failed")
         history = run(["docker", "history", "--no-trunc", "--format", "{{.CreatedBy}}", image]).stdout.lower()
         if any(term in history for term in ("password", "secret", "token", "api_key", "private_key")):
@@ -176,7 +176,7 @@ def main() -> None:
         if image_id_result.returncode == 0:
             image_id = json.loads(image_id_result.stdout)[0]["Id"]
             labels = json.loads(image_id_result.stdout)[0].get("Config", {}).get("Labels", {})
-            if labels.get("com.waterradar.wp13-run") == run_id:
+            if labels.get("com.floodready.wp13-run") == run_id:
                 run(["docker", "image", "rm", image_id], check=False)
             else:
                 raise SystemExit("refusing unowned image removal")

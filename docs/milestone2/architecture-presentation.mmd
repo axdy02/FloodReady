@@ -2,7 +2,7 @@ flowchart LR
   U["Authenticated user"] --> F["Main frontend\nfrontend/ :3000"]
   F -->|POST /api/v1/reports\nBearer + multipart| B1["Backend 1\nNode / Express"]
   B1 -->|Multer memory| V["file-type + Sharp\nvalidate and re-encode"]
-  V --> S[("Private image storage\nlocal volume or private S3")]
+  V --> S[("Local private image storage\nuploads_data volume")]
   B1 -->|one transaction| DB[("PostgreSQL + PostGIS")]
   B1 -->|201 immediately| F
   B1 -. "queueMicrotask; not durable queue" .-> B2["Backend 2\nFastAPI"]

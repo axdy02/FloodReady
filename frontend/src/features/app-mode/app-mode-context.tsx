@@ -5,7 +5,7 @@ import { createContext, type ReactNode, useContext, useEffect, useMemo, useState
 export type AppMode = "live" | "demo";
 type AppModeContextValue = { mode: AppMode; setMode: (mode: AppMode) => void };
 const AppModeContext = createContext<AppModeContextValue | null>(null);
-const modeCookie = "waterradar-app-mode";
+const modeCookie = "floodready-app-mode";
 
 function readStoredMode(): AppMode | null {
   const encoded = document.cookie

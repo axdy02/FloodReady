@@ -21,7 +21,7 @@ const incident: IncidentDto = {
 
 afterEach(() => {
   cleanup();
-  document.cookie = "waterradar-app-mode=; Path=/; Max-Age=0";
+  document.cookie = "floodready-app-mode=; Path=/; Max-Age=0";
 });
 
 describe("application mode and display adapters", () => {
@@ -32,18 +32,18 @@ describe("application mode and display adapters", () => {
     render(<AppModeProvider><ModeProbe /></AppModeProvider>);
     fireEvent.click(screen.getByRole("button", { name: "Toggle mode" }));
     expect(screen.getByText("live")).toBeInTheDocument();
-    expect(document.cookie).toContain("waterradar-app-mode=live");
+    expect(document.cookie).toContain("floodready-app-mode=live");
     cleanup();
     render(<AppModeProvider><ModeProbe /></AppModeProvider>);
     await waitFor(() => expect(screen.getByText("live")).toBeInTheDocument());
   });
 
   it("accepts only the supported stored modes", async () => {
-    document.cookie = "waterradar-app-mode=demo; Path=/";
+    document.cookie = "floodready-app-mode=demo; Path=/";
     const demo = render(<AppModeProvider><ModeProbe /></AppModeProvider>);
     await waitFor(() => expect(screen.getByText("demo")).toBeInTheDocument());
     demo.unmount();
-    document.cookie = "waterradar-app-mode=unknown; Path=/";
+    document.cookie = "floodready-app-mode=unknown; Path=/";
     render(<AppModeProvider><ModeProbe /></AppModeProvider>);
     expect(screen.getByText("demo")).toBeInTheDocument();
   });

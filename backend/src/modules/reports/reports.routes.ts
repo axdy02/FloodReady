@@ -12,7 +12,7 @@ import {
   createReportMapRateLimit,
   reportIpRateLimit,
 } from "../../middleware/rate-limit.js"
-import { imageStorage } from "../../shared/storage/image-storage-runtime.js"
+import { LocalImageStorage } from "../../shared/storage/local-image-storage.js"
 import { UploadCapacity } from "../../shared/storage/upload-capacity.js"
 import { ReportsController } from "./reports.controller.js"
 import { ReportsService } from "./reports.service.js"
@@ -22,7 +22,8 @@ import {
 } from "./reports.upload.js"
 
 const maxBytes = config.MAX_UPLOAD_SIZE_MB * 1_048_576
-const service = new ReportsService(imageStorage, { maxBytes, maxPixels: config.MAX_IMAGE_PIXELS })
+const storage = new LocalImageStorage(config.UPLOAD_DIRECTORY)
+const service = new ReportsService(storage, { maxBytes, maxPixels: config.MAX_IMAGE_PIXELS })
 const controller = new ReportsController(service)
 const capacity = new UploadCapacity(
   config.UPLOAD_PROCESSING_CONCURRENCY,

@@ -5,7 +5,6 @@ export type ImageExtension = (typeof imageExtensions)[number]
 export interface SaveValidatedImageInput {
   bytes: Buffer
   extension: ImageExtension
-  recordId: string
   serverTime: Date
 }
 
@@ -19,8 +18,6 @@ export interface StoredImage {
 }
 
 export interface ImageStorage {
-  initialize(): Promise<void>
-  checkHealth(): Promise<void>
   saveValidatedImage(input: SaveValidatedImageInput): Promise<SavedImage>
   read(key: string): Promise<StoredImage>
   delete(key: string): Promise<void>

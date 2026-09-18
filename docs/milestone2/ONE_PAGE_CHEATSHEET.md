@@ -1,4 +1,4 @@
-# WaterRadar Milestone 2 - one-page presenter cheat sheet
+# FloodReady Milestone 2 - one-page presenter cheat sheet
 
 ## One-sentence result
 

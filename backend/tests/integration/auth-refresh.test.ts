@@ -92,7 +92,7 @@ describe("refresh rotation and logout", () => {
   });
 
   it("clears invalid cookies and performs idempotent logout with one audit event", async () => {
-    const invalid = await api().post("/api/v1/auth/refresh").set("Cookie", "waterradar_refresh=not-a-token");
+    const invalid = await api().post("/api/v1/auth/refresh").set("Cookie", "floodready_refresh=not-a-token");
     expectError(invalid, 401, "INVALID_REFRESH_TOKEN");
     expect(setCookieHeaders(invalid).join(";")).toContain("Max-Age=0");
 

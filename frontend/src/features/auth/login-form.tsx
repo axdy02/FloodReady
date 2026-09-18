@@ -9,7 +9,7 @@ import { authStore } from "@/features/auth/auth-store";
 import { loginSchema } from "@/features/auth/schemas";
 import { sanitizeReturnPath } from "@/lib/security/return-path";
 
-const fieldClassName = "mt-2 min-h-12 w-full border border-[#171714] bg-[#fffdf7] px-4 py-3 text-[#171714] outline-none transition placeholder:text-[#9a9489] focus:border-[#f05a28] focus:ring-2 focus:ring-[#f05a28]";
+const fieldClassName = "mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-800 focus:ring-4 focus:ring-blue-100";
 
 export function LoginForm() {
   const router = useRouter();
@@ -38,5 +38,5 @@ export function LoginForm() {
     }
   }
 
-  return <form noValidate onSubmit={(event) => void submit(event)} className="mt-7 grid gap-5"><div><label className="text-xs font-bold uppercase tracking-[.1em] text-[#34322d]" htmlFor="email">Email</label><input className={fieldClassName} id="email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></div><div><label className="text-xs font-bold uppercase tracking-[.1em] text-[#34322d]" htmlFor="password">Password</label><input className={fieldClassName} id="password" name="password" type="password" autoComplete="current-password" aria-describedby="login-password-help" required /><p id="login-password-help" className="mt-2 text-xs text-[#777167]">Passwords are at least 12 characters.</p></div><Button className="mt-1 h-12 rounded-none border border-[#171714] bg-[#f05a28] text-sm font-bold uppercase tracking-[.08em] text-white hover:bg-[#171714]" type="submit" disabled={submitting}>{submitting ? "Signing in…" : "Sign in"}</Button>{error ? <p role="alert" className="border border-[#c83820] bg-[#fff0eb] px-4 py-3 text-sm leading-6 text-[#8d2818]">{error}</p> : null}</form>;
+  return <form noValidate onSubmit={(event) => void submit(event)} className="mt-7 grid gap-5"><div><label className="text-sm font-semibold text-slate-800" htmlFor="email">Email</label><input className={fieldClassName} id="email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></div><div><label className="text-sm font-semibold text-slate-800" htmlFor="password">Password</label><input className={fieldClassName} id="password" name="password" type="password" autoComplete="current-password" aria-describedby="login-password-help" required /><p id="login-password-help" className="mt-2 text-sm text-slate-500">Passwords are at least 12 characters.</p></div><Button className="mt-1 h-12 rounded-xl bg-[#0b2d58] text-base hover:bg-[#071f42]" type="submit" disabled={submitting}>{submitting ? "Signing in…" : "Sign in"}</Button>{error ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-900">{error}</p> : null}</form>;
 }
