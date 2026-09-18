@@ -90,7 +90,7 @@ describe("registration and login", () => {
     expect(result.user["id"]).toBe(user.id);
     expect(verifyAccessToken(result.accessToken)).toMatchObject({ userId: user.id, role: "USER" });
     const cookie = refreshCookie(response);
-    const rawToken = cookie.slice("floodready_refresh=".length);
+    const rawToken = cookie.slice("waterradar_refresh=".length);
     const headers = setCookieHeaders(response).join(";");
     expect(headers).toContain("HttpOnly");
     expect(headers).toContain("SameSite=Strict");

@@ -1,4 +1,4 @@
-# How to use and demo FloodReady
+# How to use and demo WaterRadar
 
 ## Setup
 

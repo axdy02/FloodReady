@@ -6,7 +6,7 @@ Verified against the working tree on 14 July 2026. Target duration: 6 to 8 minut
 
 ## Non-negotiable speaking rules
 
-- Call the product **FloodReady**; FloodFlow is the repository name.
+- Call the product **WaterRadar**; WaterRadar is the repository name.
 - Call the interface a **functional low-fidelity wireframe**, not a finished production UI.
 - Say **reported severity** or **user-claimed severity**, never verified severity.
 - Say **submitted evidence is unverified** until a moderator changes its status.
@@ -33,7 +33,7 @@ Do not type credentials or open `.env` during the presentation.
 
 **Say:**
 
-> FloodReady is a community flood-reporting prototype. For Milestone 2 I deliberately reduced the visible scope to two features that I can prove end to end: first, a signed-in user submits a geotagged report and reviews that persisted report with its protected evidence photo; second, that same report is retrieved and shown at the correct location on the map. This is a functional wireframe, so the emphasis is correct data flow and schema rather than a large polished frontend.
+> WaterRadar is a community flood-reporting prototype. For Milestone 2 I deliberately reduced the visible scope to two features that I can prove end to end: first, a signed-in user submits a geotagged report and reviews that persisted report with its protected evidence photo; second, that same report is retrieved and shown at the correct location on the map. This is a functional wireframe, so the emphasis is correct data flow and schema rather than a large polished frontend.
 
 **Exact transition:**
 
@@ -182,7 +182,7 @@ Memorize these six lines:
 
 Use this if live-demo time is removed or the browser cannot be used. Show the architecture and schema, then the last successful preflight output. If showing screenshots, call them previously captured evidence rather than a live system.
 
-> FloodReady Milestone 2 is intentionally limited to two working features. The reporting workflow lets a signed-in user submit a category, required description, reported severity, evidence image, and map-selected location, then review that persisted record and its protected photo in owner-only evidence history. The reports-map feature calls authenticated `/api/v1/reports/map`, receives a privacy-safe projection, and places the same row using longitude-latitude GeoJSON order. Selecting the marker can fetch the protected stored description for its owner. Refresh reads the database row again, so the marker remains. Express owns all report data and image access; FastAPI is health-only and AI triage is disabled.
+> WaterRadar Milestone 2 is intentionally limited to two working features. The reporting workflow lets a signed-in user submit a category, required description, reported severity, evidence image, and map-selected location, then review that persisted record and its protected photo in owner-only evidence history. The reports-map feature calls authenticated `/api/v1/reports/map`, receives a privacy-safe projection, and places the same row using longitude-latitude GeoJSON order. Selecting the marker can fetch the protected stored description for its owner. Refresh reads the database row again, so the marker remains. Express owns all report data and image access; FastAPI is health-only and AI triage is disabled.
 
 ## 15-second interruption answer
 

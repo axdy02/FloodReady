@@ -11,7 +11,7 @@ const projectDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const acceptanceDirectory = join(projectDirectory, ".acceptance");
 const environmentFile = join(acceptanceDirectory, "compose.env");
 const composeFile = join(projectDirectory, "docker-compose.yml");
-const project = `floodready-acceptance-${process.pid}`;
+const project = `waterradar-acceptance-${process.pid}`;
 const verifyOnly = process.argv.includes("--verify");
 let composeLaunched = false;
 let cleanupStarted = false;
@@ -34,8 +34,8 @@ const runNpm = async (argumentsForNpm, environment) => requireSuccess(process.ex
 
 const createEnvironment = () => {
   const databasePassword = randomBytes(24).toString("base64url");
-  const databaseUser = "floodready_acceptance";
-  const databaseName = "floodready_acceptance";
+  const databaseUser = "waterradar_acceptance";
+  const databaseName = "waterradar_acceptance";
   const databaseUrl = `postgresql://${databaseUser}:${encodeURIComponent(databasePassword)}@db:5432/${databaseName}`;
   return {
     NODE_ENV: "production",
@@ -52,8 +52,8 @@ const createEnvironment = () => {
     REFRESH_TOKEN_SECRET: randomBytes(64).toString("base64url"),
     ACCESS_TOKEN_TTL: "15m",
     REFRESH_TOKEN_TTL: "30d",
-    JWT_ISSUER: "floodready-acceptance",
-    JWT_AUDIENCE: "floodready-acceptance-api",
+    JWT_ISSUER: "waterradar-acceptance",
+    JWT_AUDIENCE: "waterradar-acceptance-api",
     PUBLIC_API_ORIGIN: "https://localhost:3000",
     CORS_ORIGINS: "https://localhost:3000",
     COOKIE_DOMAIN: "",

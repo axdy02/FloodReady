@@ -16,9 +16,9 @@ const navigation: ReadonlyArray<{ page: PlannedFeaturesPage; label: string; href
 ];
 
 const wireframeSessionKeys = {
-  dismissedNearbyToast: "floodready:wireframe:planned-features:nearby-toast-dismissed",
-  dismissedAlerts: "floodready:wireframe:planned-features:dismissed-alerts",
-  savedAlertAreas: "floodready:wireframe:planned-features:saved-alert-areas",
+  dismissedNearbyToast: "waterradar:wireframe:planned-features:nearby-toast-dismissed",
+  dismissedAlerts: "waterradar:wireframe:planned-features:dismissed-alerts",
+  savedAlertAreas: "waterradar:wireframe:planned-features:saved-alert-areas",
 } as const;
 
 const wireframeSessionState = new Map<string, unknown>();

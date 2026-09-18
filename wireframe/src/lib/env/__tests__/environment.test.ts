@@ -7,6 +7,8 @@ const source = {
   NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001/api/v1",
   INTERNAL_API_BASE_URL: "http://backend:3000/api/v1",
   NEXT_PUBLIC_APP_ORIGIN: "http://localhost:3000",
+  NEXT_PUBLIC_ALLOW_INSECURE_PUBLIC_HTTP: "false",
+  NEXT_PUBLIC_CARTO_BASEMAP_KEY: "test-carto-key",
   NEXT_PUBLIC_MAP_STYLE_URL: "https://map.test.invalid/style.json",
   NEXT_PUBLIC_MAP_ATTRIBUTION: "Test fixture only",
   NEXT_PUBLIC_MAP_CONNECT_ORIGINS: "https://map.test.invalid",
@@ -28,7 +30,13 @@ describe("environment validation", () => {
     expect(() => parseClientEnvironment({ ...source, NEXT_PUBLIC_API_BASE_URL: undefined })).toThrow();
     expect(() => parseClientEnvironment({ ...source, NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001/other" })).toThrow();
     expect(() => parseClientEnvironment({ ...source, NEXT_PUBLIC_MAP_STYLE_URL: "https://other.test.invalid/style.json" })).toThrow();
-    expect(() => parseClientEnvironment({ ...source, FRONTEND_ENV: "production" })).toThrow();
+    expect(parseClientEnvironment({ ...source, FRONTEND_ENV: "production" }).FRONTEND_ENV).toBe("production");
     expect(() => parseClientEnvironment({ ...source, FRONTEND_ENV: "local", NEXT_PUBLIC_APP_ORIGIN: "http://example.invalid" })).toThrow();
+  });
+
+  it("requires an explicit opt-in for a public HTTP deployment", () => {
+    const publicHttp = { ...source, FRONTEND_ENV: "production", NEXT_PUBLIC_API_BASE_URL: "http://203.0.113.10:3001/api/v1", NEXT_PUBLIC_APP_ORIGIN: "http://203.0.113.10:3000" };
+    expect(() => parseClientEnvironment(publicHttp)).toThrow();
+    expect(parseClientEnvironment({ ...publicHttp, NEXT_PUBLIC_ALLOW_INSECURE_PUBLIC_HTTP: "true" }).NEXT_PUBLIC_ALLOW_INSECURE_PUBLIC_HTTP).toBe(true);
   });
 });

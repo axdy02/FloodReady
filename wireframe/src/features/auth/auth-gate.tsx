@@ -11,7 +11,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const params = useSearchParams();
   if (isProtectedState(state)) return <>{children}</>;
-  if (state.kind === "RESTORING") return <main className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-2xl place-items-center px-4"><section aria-live="polite" className="w-full rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-950 shadow-sm"><p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">FloodReady</p><h1 className="mt-3 text-3xl font-bold text-slate-950">Checking your session</h1><p className="mt-3 text-slate-600">We are confirming whether a signed-in session is available.</p></section></main>;
+  if (state.kind === "RESTORING") return <main className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-2xl place-items-center px-4"><section aria-live="polite" className="w-full rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-950 shadow-sm"><p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">WaterRadar</p><h1 className="mt-3 text-3xl font-bold text-slate-950">Checking your session</h1><p className="mt-3 text-slate-600">We are confirming whether a signed-in session is available.</p></section></main>;
   const query = params.toString();
   const target = sanitizeReturnPath(`${pathname}${query.length === 0 ? "" : `?${query}`}`);
   const unavailable = state.kind === "SESSION_UNAVAILABLE";

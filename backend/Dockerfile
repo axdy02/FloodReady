@@ -1,5 +1,5 @@
 FROM node:24.18.0-bookworm-slim@sha256:cb4e8f7c443347358b7875e717c29e27bf9befc8f5a26cf18af3c3dec80e58c5 AS runtime-base
-RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/* && groupadd --gid 10001 floodready && useradd --uid 10001 --gid 10001 --create-home floodready && mkdir -p /app/uploads && chown -R 10001:10001 /app
+RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/* && groupadd --gid 10001 waterradar && useradd --uid 10001 --gid 10001 --create-home waterradar && mkdir -p /app/uploads && chown -R 10001:10001 /app
 WORKDIR /app
 
 FROM runtime-base AS dependencies
@@ -7,13 +7,13 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 FROM dependencies AS build
-ARG DATABASE_URL=postgresql://localhost:5432/floodready_build
+ARG DATABASE_URL=postgresql://localhost:5432/waterradar_build
 ENV DATABASE_URL=$DATABASE_URL
 COPY . .
 RUN npm run build
 
 FROM dependencies AS demo-seed-build
-ARG DATABASE_URL=postgresql://localhost:5432/floodready_build
+ARG DATABASE_URL=postgresql://localhost:5432/waterradar_build
 ENV DATABASE_URL=$DATABASE_URL
 COPY . .
 RUN npm run build:demo-seed && mkdir -p dist-demo/src && cp -R src/generated dist-demo/src/generated && cp prisma/demo-locations.json dist-demo/prisma/demo-locations.json

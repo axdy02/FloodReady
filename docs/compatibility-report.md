@@ -1,4 +1,4 @@
-# Archived: FloodReady Milestone 1 Compatibility Report
+# Archived: WaterRadar Milestone 1 Compatibility Report
 
 > Historical audit recorded on 2026-07-12. It predates the current Milestone 2 direct-report, Backend 2, Gemini, and LangGraph implementation. Do not use it as the current API or architecture reference; use [docs/milestone2/05-api-contract.md](milestone2/05-api-contract.md) and [docs/milestone2/01-architecture.md](milestone2/01-architecture.md).
 
@@ -44,7 +44,7 @@ Health exposes `GET /health` and `GET /health/ready`. Authentication exposes reg
 
 The authoritative role enum is USER, MODERATOR, ADMIN. Report categories, severities, verification statuses, incident statuses, and moderation reasons match `backend/prisma/schema.prisma` and `backend/src/modules/reports/reports.types.ts`. Existing validation enforces strict JSON bodies, bounded keyset cursors, 1–100 list limits, bbox pairing/order, maximum 366-day time ranges, image metadata bounds, and moderation reason requirements. Current report creation requires a positive non-null GPS accuracy.
 
-Refresh uses the HttpOnly, SameSite Strict `floodready_refresh` cookie scoped to `/api/v1/auth`; production origin checks and cookie-domain validation remain backend authority. Image upload accepts one bounded JPEG, PNG, or WebP, verifies decoded bytes, strips metadata through the processing path, and saves only an opaque server-generated key. Storage has save/delete operations and containment checks; no existing route retrieves report images.
+Refresh uses the HttpOnly, SameSite Strict `waterradar_refresh` cookie scoped to `/api/v1/auth`; production origin checks and cookie-domain validation remain backend authority. Image upload accepts one bounded JPEG, PNG, or WebP, verifies decoded bytes, strips metadata through the processing path, and saves only an opaque server-generated key. Storage has save/delete operations and containment checks; no existing route retrieves report images.
 
 ## Required compatibility gaps
 

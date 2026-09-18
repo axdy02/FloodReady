@@ -10,6 +10,7 @@ import type {
 } from "./reports.types.js"
 
 interface CreateReportRowInput extends CreateReportMetadata {
+  id: string
   imagePath: string
   imageMime: "image/jpeg" | "image/png" | "image/webp"
   imageSha256: string
@@ -170,6 +171,7 @@ export class ReportTransactionRepository {
   async create(input: CreateReportRowInput): Promise<ReportRecord> {
     const report = await this.transaction.floodReport.create({
       data: {
+        id: input.id,
         capturedAt: input.capturedAt,
         category: input.category,
         description: input.description,

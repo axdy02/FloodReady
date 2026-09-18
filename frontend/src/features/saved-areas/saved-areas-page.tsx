@@ -12,7 +12,7 @@ import { readBrowserJson, writeBrowserJson } from "@/lib/storage/browser-storage
 
 type SessionSavedArea = { id: string; name: string; latitude: number; longitude: number; radiusMetres: number; createdAt: string };
 type PreviewLocation = { latitude: number; longitude: number };
-const storageKey = "floodready.saved-areas";
+const storageKey = "waterradar.saved-areas";
 const reportRadiusMetres = 2_000;
 const previewLayers: MapLayerState = { roads: false, markers: false, heatmap: false, shelters: false, weather: false, traffic: false };
 

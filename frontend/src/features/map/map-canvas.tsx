@@ -5,6 +5,7 @@ import type { GeoJSONSource, Map as MapLibreMap, StyleSpecification } from "mapl
 import type { RoadPath } from "@/features/map/demo-preview-incidents";
 import type { MapViewport } from "@/features/map/types";
 import type { IncidentDto, ReportMapDto } from "@/lib/api/contracts";
+import { getCartoBasemapKey } from "@/lib/env/client";
 
 export type MapLayerState = {
   roads: boolean;
@@ -116,16 +117,19 @@ const weather = {
   }]
 };
 
+const cartoBaseMapKey = getCartoBasemapKey();
+const cartoTileUrl = (subdomain: string) => `https://${subdomain}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png${cartoBaseMapKey === undefined ? "" : `?key=${encodeURIComponent(cartoBaseMapKey)}`}`;
+
 const cartoDarkMatterStyle: StyleSpecification = {
   version: 8,
   sources: {
     carto: {
       type: "raster",
       tiles: [
-        "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-        "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-        "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-        "https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+        cartoTileUrl("a"),
+        cartoTileUrl("b"),
+        cartoTileUrl("c"),
+        cartoTileUrl("d")
       ],
       tileSize: 256,
       attribution: "© OpenStreetMap contributors © CARTO"
@@ -360,7 +364,7 @@ export function MapCanvas({
     map.jumpTo({ center: [viewport.longitude, viewport.latitude], zoom: viewport.zoom });
   }, [viewport.latitude, viewport.longitude, viewport.zoom]);
 
-  return <section aria-label="FloodReady map" className="relative h-full overflow-hidden bg-[#0d1015]">
+  return <section aria-label="WaterRadar map" className="relative h-full overflow-hidden bg-[#0d1015]">
     <div ref={container} className="h-full w-full bg-[#0d1015]" />
     {loadError ? <p role="status" className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-xl border border-amber-400/25 bg-[#17171a] px-4 py-3 text-sm text-amber-200 shadow-xl">The basemap could not load. Map overlays are still available.</p> : null}
     <span className="absolute bottom-2 right-3 text-[10px] text-zinc-600">{attribution}</span>

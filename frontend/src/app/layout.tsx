@@ -6,7 +6,7 @@ import { PageTransition } from "@/components/motion/page-transition";
 import { AppProviders } from "@/providers/app-providers";
 import "./globals.css";
 
-export const metadata: Metadata = { title: "FloodReady", description: "Flood reporting and incident awareness" };
+export const metadata: Metadata = { title: "WaterRadar", description: "Street-level water intelligence, verified by people and AI" };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   await connection();

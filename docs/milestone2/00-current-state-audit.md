@@ -28,7 +28,7 @@ The Node service owns the entire application schema in one PostgreSQL `public` s
 | ORM / data access | Prisma client with PostgreSQL adapter; parameterized raw SQL for spatial reads | The Node service's internal DAL; it is not shared with FastAPI | `backend/src/database/prisma.ts`; `backend/src/modules/reports/reports.repository.ts` |
 | Evidence storage | Local opaque report image keys on the `uploads_data` Docker volume | Durable processed image bytes; only the key is stored in `flood_reports.image_path` | `backend/src/shared/storage/local-image-storage.ts`; `docker-compose.yml` |
 
-The repository directory is named FloodFlow, while package names and the application UI use **FloodReady**. The presentation should use FloodReady unless the project is deliberately renamed later.
+The repository directory is named WaterRadar, while package names and the application UI use **WaterRadar**. The presentation should use WaterRadar unless the project is deliberately renamed later.
 
 ## Current service boundaries
 
@@ -113,4 +113,4 @@ Evidence: `backend/src/modules/auth`, `backend/src/middleware/authenticate.ts`, 
 
 ## Presentation-safe summary
 
-> FloodReady uses a Next.js wireframe and MapLibre in the browser. Both report creation and map retrieval go through the Node/Express service. That service alone owns one PostgreSQL/PostGIS public schema and the upload store. The FastAPI service is deployed separately but is currently health-only, so it is shown outside the P0 data flow. A created report is stored once in `flood_reports`, then the map reads that same row through `/reports/map`; there is no duplicated map database and no hard-coded report array.
+> WaterRadar uses a Next.js wireframe and MapLibre in the browser. Both report creation and map retrieval go through the Node/Express service. That service alone owns one PostgreSQL/PostGIS public schema and the upload store. The FastAPI service is deployed separately but is currently health-only, so it is shown outside the P0 data flow. A created report is stored once in `flood_reports`, then the map reads that same row through `/reports/map`; there is no duplicated map database and no hard-coded report array.

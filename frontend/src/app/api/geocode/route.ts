@@ -18,7 +18,7 @@ export async function GET(request: Request): Promise<Response> {
   const timer = setTimeout(() => controller.abort(), 8_000);
   try {
     const response = await fetch(url, {
-      headers: { Accept: "application/json", "User-Agent": "FloodReady local project (local@floodready.invalid)" },
+      headers: { Accept: "application/json", "User-Agent": "WaterRadar local project (local@waterradar.invalid)" },
       cache: "no-store",
       signal: controller.signal
     });

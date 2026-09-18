@@ -84,7 +84,7 @@ export const refreshCookie = (response: Response): string => {
   if (!Array.isArray(raw)) {
     throw new Error("Expected refresh cookie");
   }
-  const cookie = raw.find((value) => value.startsWith("floodready_refresh="));
+  const cookie = raw.find((value) => value.startsWith("waterradar_refresh="));
   expect(cookie).toBeDefined();
   if (cookie === undefined) {
     throw new Error("Expected refresh cookie");

@@ -8,9 +8,9 @@ const postgisImage = "postgis/postgis:18-3.6@sha256:f248a10d133f63d01aefab324f34
 const npmCli = process.platform === "win32"
   ? resolve(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js")
   : resolve(dirname(process.execPath), "..", "lib", "node_modules", "npm", "bin", "npm-cli.js");
-const containerName = `floodready-test-${process.pid}-${randomBytes(6).toString("hex")}`;
-const databaseName = "floodready_test";
-const databaseUser = "floodready_test_user";
+const containerName = `waterradar-test-${process.pid}-${randomBytes(6).toString("hex")}`;
+const databaseName = "waterradar_test";
+const databaseUser = "waterradar_test_user";
 const databasePassword = randomBytes(24).toString("base64url");
 let uploadDirectory = "";
 let containerStarted = false;
@@ -68,8 +68,8 @@ const testEnvironment = (databaseUrl) => ({
   REFRESH_TOKEN_SECRET: randomBytes(64).toString("base64url"),
   ACCESS_TOKEN_TTL: "15m",
   REFRESH_TOKEN_TTL: "30d",
-  JWT_ISSUER: "floodready-test",
-  JWT_AUDIENCE: "floodready-test-api",
+  JWT_ISSUER: "waterradar-test",
+  JWT_AUDIENCE: "waterradar-test-api",
   PUBLIC_API_ORIGIN: "http://127.0.0.1:3100",
   CORS_ORIGINS: "http://127.0.0.1:3100",
   COOKIE_DOMAIN: "",
@@ -133,7 +133,7 @@ const stop = () => {
 };
 
 const main = async () => {
-  uploadDirectory = await mkdtemp(join(tmpdir(), "floodready-test-"));
+  uploadDirectory = await mkdtemp(join(tmpdir(), "waterradar-test-"));
   await requireSuccess("docker", [
     "run",
     "--detach",

@@ -1,6 +1,6 @@
-# FloodReady Backend 1
+# WaterRadar Backend 1
 
-Backend 1 is the Node.js/Express system of record for FloodReady. It owns authentication, report validation, private image storage, PostgreSQL/PostGIS persistence, report/map APIs, and the internal call to Backend 2 for advisory AI analysis.
+Backend 1 is the Node.js/Express system of record for WaterRadar. It owns authentication, report validation, private image storage, PostgreSQL/PostGIS persistence, report/map APIs, and the internal call to Backend 2 for advisory AI analysis.
 
 It serves all public application APIs beneath `/api/v1`. In the root Compose stack it is exposed at `http://localhost:3001/api/v1`.
 

@@ -1,4 +1,4 @@
-# FloodReady frontend and wireframe audit
+# WaterRadar frontend and wireframe audit
 
 Audit date: 2026-07-16. Repository inspection preceded implementation.
 
@@ -6,7 +6,7 @@ Audit date: 2026-07-16. Repository inspection preceded implementation.
 |---|---|---|
 | Frontend framework | Next.js 16, React 19, TypeScript | `frontend/package.json`, `wireframe/package.json` |
 | Routing | App Router route groups `(public)` and `(protected)` | `frontend/src/app`, `wireframe/src/app` |
-| Production frontend | Dark FloodReady UI, protected shell, public landing/auth routes | `frontend/src/app`, `frontend/src/components/app-shell/protected-shell.tsx` |
+| Production frontend | Dark WaterRadar UI, protected shell, public landing/auth routes | `frontend/src/app`, `frontend/src/components/app-shell/protected-shell.tsx` |
 | Wireframe structure | A separate Next app with a light Milestone 2 UI | `wireframe/src/app`, `wireframe/src/components/app-shell/protected-shell.tsx` |
 | Map library/provider | MapLibre GL; dark CARTO fallback or environment style URL | `*/src/features/map/map-canvas.tsx`, `*/src/lib/env/client.ts` |
 | API client | Typed Zod response contracts and one request wrapper | `frontend/src/lib/api/contracts.ts`, `frontend/src/lib/api/request.ts` |

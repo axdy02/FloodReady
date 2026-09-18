@@ -5,7 +5,7 @@ RUN python -m pip install --no-cache-dir --require-hashes --prefix /runtime -r r
 
 FROM python:3.13.11-slim-bookworm@sha256:20080e807bfc404f8450b185cf0fc95d553462673598549613735f70a5b4d5d0 AS runtime
 WORKDIR /app
-RUN groupadd --gid 10001 floodready && useradd --uid 10001 --gid 10001 --create-home floodready
+RUN groupadd --gid 10001 waterradar && useradd --uid 10001 --gid 10001 --create-home waterradar
 COPY --from=dependencies /runtime /usr/local
 COPY app ./app
 RUN find /usr/local/lib/python3.13/site-packages -type d \( -name tests -o -name __pycache__ \) -prune -exec rm -rf {} + \

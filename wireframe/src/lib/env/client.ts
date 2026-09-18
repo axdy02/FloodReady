@@ -1,15 +1,15 @@
 import { z } from "zod";
 
-type ClientSource = Record<"FRONTEND_ENV" | "NEXT_PUBLIC_API_BASE_URL" | "NEXT_PUBLIC_APP_ORIGIN" | "NEXT_PUBLIC_MAP_STYLE_URL" | "NEXT_PUBLIC_MAP_ATTRIBUTION" | "NEXT_PUBLIC_MAP_CONNECT_ORIGINS" | "NEXT_PUBLIC_MAP_IMAGE_ORIGINS" | "NEXT_PUBLIC_DEFAULT_MAP_LATITUDE" | "NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE" | "NEXT_PUBLIC_DEFAULT_MAP_ZOOM" | "NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB", string | undefined>;
+type ClientSource = Record<"FRONTEND_ENV" | "NEXT_PUBLIC_API_BASE_URL" | "NEXT_PUBLIC_APP_ORIGIN" | "NEXT_PUBLIC_ALLOW_INSECURE_PUBLIC_HTTP" | "NEXT_PUBLIC_MAP_STYLE_URL" | "NEXT_PUBLIC_MAP_ATTRIBUTION" | "NEXT_PUBLIC_MAP_CONNECT_ORIGINS" | "NEXT_PUBLIC_MAP_IMAGE_ORIGINS" | "NEXT_PUBLIC_DEFAULT_MAP_LATITUDE" | "NEXT_PUBLIC_DEFAULT_MAP_LONGITUDE" | "NEXT_PUBLIC_DEFAULT_MAP_ZOOM" | "NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB", string | undefined> & { NEXT_PUBLIC_CARTO_BASEMAP_KEY?: string | undefined };
 
 function origin(value: string): boolean {
   const parsed = new URL(value);
-  return parsed.origin === value && parsed.username === "" && parsed.password === "";
+  return (parsed.protocol === "http:" || parsed.protocol === "https:") && parsed.origin === value && parsed.username === "" && parsed.password === "";
 }
 
 function apiUrl(value: string): boolean {
   const parsed = new URL(value);
-  return parsed.pathname === "/api/v1" && parsed.search === "" && parsed.hash === "" && parsed.username === "" && parsed.password === "";
+  return (parsed.protocol === "http:" || parsed.protocol === "https:") && parsed.pathname === "/api/v1" && parsed.search === "" && parsed.hash === "" && parsed.username === "" && parsed.password === "";
 }
 
 function mapOrigins(value: string): string[] {
@@ -24,6 +24,8 @@ const baseSchema = z.object({
   FRONTEND_ENV: z.enum(["test", "local", "production"]),
   NEXT_PUBLIC_API_BASE_URL: z.string().refine(apiUrl),
   NEXT_PUBLIC_APP_ORIGIN: z.string().refine(origin),
+  NEXT_PUBLIC_ALLOW_INSECURE_PUBLIC_HTTP: z.enum(["true", "false"]).transform((value) => value === "true").default(false),
+  NEXT_PUBLIC_CARTO_BASEMAP_KEY: z.preprocess((value) => typeof value === "string" && value.trim() === "" ? undefined : value, z.string().trim().min(1).optional()),
   NEXT_PUBLIC_MAP_STYLE_URL: z.string().url(),
   NEXT_PUBLIC_MAP_ATTRIBUTION: z.string().min(1).max(240).refine((value) => value === value.trim() && !/[\r\n<>&]/u.test(value)),
   NEXT_PUBLIC_MAP_CONNECT_ORIGINS: z.string().min(1),
@@ -36,6 +38,14 @@ const baseSchema = z.object({
 
 export type ClientEnvironment = z.infer<typeof baseSchema> & { mapConnectOrigins: string[]; mapImageOrigins: string[] };
 
+export function getCartoBasemapKey(): string | undefined {
+  const key = process.env.NEXT_PUBLIC_CARTO_BASEMAP_KEY?.trim() || undefined;
+  if (process.env.NODE_ENV === "development" && key === undefined) {
+    globalThis["console"]?.warn("NEXT_PUBLIC_CARTO_BASEMAP_KEY is not configured");
+  }
+  return key;
+}
+
 export function parseClientEnvironment(source: ClientSource): ClientEnvironment {
   const parsed = baseSchema.parse(source);
   const connect = mapOrigins(parsed.NEXT_PUBLIC_MAP_CONNECT_ORIGINS);
@@ -44,14 +54,27 @@ export function parseClientEnvironment(source: ClientSource): ClientEnvironment 
   if (style.username !== "" || style.password !== "" || style.hash !== "" || !connect.includes(style.origin)) {
     throw new Error("Invalid map style URL");
   }
-  if (parsed.FRONTEND_ENV === "production" && [parsed.NEXT_PUBLIC_API_BASE_URL, parsed.NEXT_PUBLIC_APP_ORIGIN, parsed.NEXT_PUBLIC_MAP_STYLE_URL, ...connect, ...images].some((entry) => !entry.startsWith("https://"))) {
-    throw new Error("Production requires HTTPS");
+  const browserOrigins = [parsed.NEXT_PUBLIC_API_BASE_URL, parsed.NEXT_PUBLIC_APP_ORIGIN];
+  const insecureBrowserOrigin = browserOrigins.some((entry) => new URL(entry).protocol === "http:");
+  if (parsed.FRONTEND_ENV === "production" && [parsed.NEXT_PUBLIC_MAP_STYLE_URL, ...connect, ...images].some((entry) => !entry.startsWith("https://"))) {
+    throw new Error("Production map resources require HTTPS");
+  }
+  if (parsed.FRONTEND_ENV === "production" && parsed.NEXT_PUBLIC_CARTO_BASEMAP_KEY === undefined) {
+    throw new Error("NEXT_PUBLIC_CARTO_BASEMAP_KEY is required in production");
+  }
+  if (insecureBrowserOrigin && !parsed.NEXT_PUBLIC_ALLOW_INSECURE_PUBLIC_HTTP) {
+    for (const entry of browserOrigins) {
+      const endpoint = new URL(entry);
+      if (endpoint.protocol === "http:" && endpoint.hostname !== "localhost" && endpoint.hostname !== "127.0.0.1") {
+        throw new Error("Public HTTP requires NEXT_PUBLIC_ALLOW_INSECURE_PUBLIC_HTTP=true");
+      }
+    }
   }
   if (parsed.FRONTEND_ENV === "local") {
-    for (const value of [parsed.NEXT_PUBLIC_API_BASE_URL, parsed.NEXT_PUBLIC_APP_ORIGIN]) {
+    for (const value of browserOrigins) {
       const parsedValue = new URL(value);
-      if (parsedValue.protocol === "http:" && parsedValue.hostname !== "localhost") {
-        throw new Error("Local HTTP origin must use localhost");
+      if (parsedValue.protocol === "http:" && parsedValue.hostname !== "localhost" && parsedValue.hostname !== "127.0.0.1" && !parsed.NEXT_PUBLIC_ALLOW_INSECURE_PUBLIC_HTTP) {
+        throw new Error("Local HTTP origin must use localhost or 127.0.0.1");
       }
     }
     if (!style.protocol.startsWith("https")) {
@@ -72,6 +95,8 @@ export function loadClientEnvironment(): ClientEnvironment {
     FRONTEND_ENV: clientEnvironment,
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
     NEXT_PUBLIC_APP_ORIGIN: process.env.NEXT_PUBLIC_APP_ORIGIN,
+    NEXT_PUBLIC_ALLOW_INSECURE_PUBLIC_HTTP: process.env.NEXT_PUBLIC_ALLOW_INSECURE_PUBLIC_HTTP,
+    NEXT_PUBLIC_CARTO_BASEMAP_KEY: process.env.NEXT_PUBLIC_CARTO_BASEMAP_KEY,
     NEXT_PUBLIC_MAP_STYLE_URL: process.env.NEXT_PUBLIC_MAP_STYLE_URL,
     NEXT_PUBLIC_MAP_ATTRIBUTION: process.env.NEXT_PUBLIC_MAP_ATTRIBUTION,
     NEXT_PUBLIC_MAP_CONNECT_ORIGINS: process.env.NEXT_PUBLIC_MAP_CONNECT_ORIGINS,

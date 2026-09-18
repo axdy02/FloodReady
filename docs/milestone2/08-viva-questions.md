@@ -146,7 +146,7 @@ Each report has a non-null reporter foreign key, and both create and map routes 
 
 ### 32. How are passwords and sessions handled?
 
-Passwords use Argon2id. Access tokens are HS512 bearer tokens kept in memory, while refresh tokens are hashed in PostgreSQL and delivered through the HttpOnly `floodready_refresh` cookie (`backend/src/shared/security/`).
+Passwords use Argon2id. Access tokens are HS512 bearer tokens kept in memory, while refresh tokens are hashed in PostgreSQL and delivered through the HttpOnly `waterradar_refresh` cookie (`backend/src/shared/security/`).
 
 ### 33. How are uploaded images protected?
 
@@ -196,7 +196,7 @@ The repository already separates the Node application boundary from a Python/Fas
 
 ### 44. Which tile provider is used?
 
-The configured presentation basemap uses the OpenFreeMap Liberty style and carries OpenStreetMap contributor attribution. It is an external visual resource requested by MapLibre; it never supplies or stores FloodReady reports.
+The configured presentation basemap uses the OpenFreeMap Liberty style and carries OpenStreetMap contributor attribution. It is an external visual resource requested by MapLibre; it never supplies or stores WaterRadar reports.
 
 ### 45. How does clicking the map produce geographic coordinates?
 

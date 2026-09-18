@@ -44,7 +44,7 @@ export default function SettingsPage() {
     <header className="mb-6">
       <p className="text-xs font-semibold uppercase tracking-[.14em] text-slate-500">System settings</p>
       <h1 className="mt-1 text-2xl font-semibold text-slate-950">Settings</h1>
-      <p className="mt-1 text-sm text-slate-600">Check whether the FloodReady services are available.</p>
+      <p className="mt-1 text-sm text-slate-600">Check whether the WaterRadar services are available.</p>
     </header>
     <section aria-labelledby="service-status-heading" className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">

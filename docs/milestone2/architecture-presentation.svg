@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
-  <title id="title">FloodReady current Milestone 2 architecture</title>
+  <title id="title">WaterRadar current Milestone 2 architecture</title>
   <desc id="desc">Main frontend submits a report to Node Express, which persists it immediately and starts an in-process background call to FastAPI, Open-Meteo, and Gemini. The map reads the same report row and shows AI status.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#334155"/></marker>
@@ -10,14 +10,14 @@
     </style>
   </defs>
   <rect width="1600" height="980" fill="#fff"/>
-  <text x="52" y="58" class="title">FloodReady Milestone 2 architecture</text>
+  <text x="52" y="58" class="title">WaterRadar Milestone 2 architecture</text>
   <text x="52" y="88" class="sub">Current primary flow: persist first, validate with AI in the background, then update the same report</text>
   <rect x="1110" y="36" width="435" height="44" rx="22" fill="#eff6ff" stroke="#93c5fd"/><text x="1327" y="64" text-anchor="middle" class="label" fill="#1d4ed8">Main frontend :3000 · comparison wireframe :3002</text>
 
   <rect x="55" y="155" width="300" height="245" rx="18" fill="#eff6ff" stroke="#60a5fa" stroke-width="2"/><text x="80" y="195" class="box">Main frontend</text><text x="80" y="222" class="sub">frontend/ · Next.js</text><text x="80" y="264" class="body">Form + one File object</text><text x="80" y="292" class="body">Location + description</text><text x="80" y="320" class="body">Immediate saved state</text><text x="80" y="348" class="body">Map / reports polling</text><text x="80" y="380" class="small">Does not wait for AI</text>
   <rect x="425" y="135" width="390" height="450" rx="18" fill="#f8fafc" stroke="#334155" stroke-width="2"/><rect x="425" y="135" width="390" height="70" rx="18" fill="#e2e8f0"/><path d="M425 185h390v20H425z" fill="#e2e8f0"/><text x="455" y="177" class="box">Backend 1</text><text x="455" y="197" class="sub">Node / Express · sole DB owner</text><rect x="455" y="235" width="330" height="76" rx="10" fill="#fff" stroke="#cbd5e1"/><text x="475" y="264" class="label">Validate upload</text><text x="475" y="288" class="small">Multer memory · file-type · Sharp</text><rect x="455" y="330" width="330" height="92" rx="10" fill="#fff" stroke="#cbd5e1"/><text x="475" y="359" class="label">Persist immediately</text><text x="475" y="383" class="small">flood_reports + ai_analyses(PROCESSING)</text><text x="475" y="403" class="small">PENDING_REVIEW + REPORT_CREATED audit</text><rect x="455" y="441" width="330" height="112" rx="10" fill="#ecfdf5" stroke="#86efac"/><text x="475" y="470" class="label" fill="#166534">Background processing</text><text x="475" y="494" class="small">queueMicrotask → Backend 2</text><text x="475" y="516" class="small">success: PROVISIONAL + AI severity</text><text x="475" y="538" class="small">failure: analysis FAILED/TIMED_OUT</text>
 
-  <rect x="885" y="135" width="290" height="205" rx="18" fill="#fef3c7" stroke="#d97706" stroke-width="2"/><text x="912" y="175" class="box">Private storage</text><text x="912" y="202" class="sub">LocalImageStorage</text><text x="912" y="244" class="body">Processed image bytes</text><text x="912" y="272" class="body">uploads_data volume</text><text x="912" y="300" class="small">DB stores image_path + metadata</text>
+  <rect x="885" y="135" width="290" height="205" rx="18" fill="#fef3c7" stroke="#d97706" stroke-width="2"/><text x="912" y="175" class="box">Private storage</text><text x="912" y="202" class="sub">LocalImageStorage / S3ImageStorage</text><text x="912" y="244" class="body">Processed image bytes</text><text x="912" y="272" class="body">local volume or private S3</text><text x="912" y="300" class="small">DB stores image_path + metadata</text>
   <rect x="1220" y="135" width="325" height="205" rx="18" fill="#fef3c7" stroke="#d97706" stroke-width="2"/><text x="1247" y="175" class="box">PostgreSQL + PostGIS</text><text x="1247" y="202" class="sub">one public schema</text><text x="1247" y="244" class="body">flood_reports · ai_analyses</text><text x="1247" y="272" class="body">users · audits · incidents</text><text x="1247" y="300" class="small">generated geography + GiST</text>
 
   <rect x="885" y="430" width="290" height="205" rx="18" fill="#ecfdf5" stroke="#34d399" stroke-width="2"/><text x="912" y="470" class="box">Backend 2</text><text x="912" y="497" class="sub">FastAPI + LangGraph</text><text x="912" y="539" class="body">weather -> Gemini -> validate</text><text x="912" y="567" class="body">score_validation -> JSON result</text><text x="912" y="595" class="small">No DB; no permanent image copy</text>
@@ -29,7 +29,7 @@
   <path d="M355 278H425" stroke="#2563eb" stroke-width="3" fill="none" marker-end="url(#blue)"/><text x="390" y="264" text-anchor="middle" class="label" fill="#1d4ed8">multipart</text>
   <path d="M815 275H885" stroke="#d97706" stroke-width="3" fill="none" marker-end="url(#arrow)"/><text x="850" y="260" text-anchor="middle" class="small">save bytes</text>
   <path d="M815 360H1220" stroke="#d97706" stroke-width="3" fill="none" marker-end="url(#arrow)"/><text x="1018" y="346" text-anchor="middle" class="small">rows + analysis state</text>
-  <path d="M815 490H885" stroke="#15803d" stroke-width="3" stroke-dasharray="8 6" fill="none" marker-end="url(#green)"/><text x="850" y="476" text-anchor="middle" class="small">async HTTP</text>
+  <path d="M815 490H885" stroke="#15803d" stroke-width="3" stroke-dasharray="8 6" fill="none" marker-end="url(#green)"/><text x="850" y="476" text-anchor="middle" class="small">stored bytes → async HTTP</text>
   <path d="M1175 520H1220" stroke="#15803d" stroke-width="3" fill="none" marker-end="url(#green)"/><text x="1198" y="506" text-anchor="middle" class="small">provider</text>
   <path d="M1220 610C1050 680 900 600 815 530" stroke="#15803d" stroke-width="3" stroke-dasharray="8 6" fill="none" marker-end="url(#green)"/><text x="1000" y="665" text-anchor="middle" class="small">validated result</text>
   <path d="M425 780H355" stroke="#15803d" stroke-width="3" fill="none" marker-end="url(#green)"/><text x="390" y="766" text-anchor="middle" class="small">map read</text>
